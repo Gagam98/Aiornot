@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Quiz 게임</title>
-    <link href="../static/css/main.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/main.css') }}" rel="stylesheet">
 </head>
 <body class="bg-gray-50 min-h-screen">
     <div class="container mx-auto px-4 py-8 max-w-8xl mt-12">
@@ -108,47 +109,23 @@
     </div>
 
     <script>
-        // URL 파라미터에서 난이도 가져오기
-        function getDifficultyFromURL() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const difficulty = urlParams.get('difficulty') || 'easy';
-            return difficulty.toLowerCase();
-        }
+    document.addEventListener('DOMContentLoaded', async function() {
+        // --- 기본 설정 및 상태 관리 ---
+        const urlParams = new URLSearchParams(window.location.search);
+        const difficulty = urlParams.get('difficulty') || 'easy';
+        const category = urlParams.get('category') || '알 수 없음';
 
-        // 난이도에 따른 이미지 개수 결정
-        function getImageCountByDifficulty(difficulty) {
-            const difficultyMap = {
-                'easy': 2,
-                'hard': 6
-            };
-            return difficultyMap[difficulty] || 2;
-        }
-
-        // 난이도 표시명 가져오기
-        function getDifficultyDisplayName(difficulty) {
-            const displayMap = {
-                'easy': 'Easy (2개)',
-                'hard': 'Hard (6개)'
-            };
-            return displayMap[difficulty] || 'Easy (2개)';
-        }
-
-        // 게임 상태 관리
-        const currentDifficulty = getDifficultyFromURL();
-        let gameState = {
+        const gameState = {
             currentQuestion: 1,
             totalQuestions: 10,
             score: 0,
             selectedAnswer: null,
             correctAnswer: null,
-            difficulty: currentDifficulty,
-            imageCount: getImageCountByDifficulty(currentDifficulty)
+            difficulty: difficulty.toLowerCase(),
+            imageCount: difficulty.toLowerCase() === 'hard' ? 6 : 2
         };
 
-        // DOM 요소들
         const elements = {
-            userButton: document.getElementById('userButton'),
-            userPopup: document.getElementById('userPopup'),
             imageGrid: document.getElementById('imageGrid'),
             difficultyDisplay: document.getElementById('difficultyDisplay'),
             skipBtn: document.getElementById('skipBtn'),
@@ -156,192 +133,125 @@
             resultMessage: document.getElementById('resultMessage'),
             resultContent: document.getElementById('resultContent'),
             currentQuestion: document.getElementById('currentQuestion'),
-            currentScore: document.getElementById('currentScore')
+            currentScore: document.getElementById('currentScore'),
+            currentCategory: document.getElementById('currentCategory'),
+            userButton: document.getElementById('userButton'),
+            userPopup: document.getElementById('userPopup')
         };
 
-        // 샘플 이미지 데이터 (실제로는 서버에서 받아올 데이터)
-        const sampleImages = [
-            'https://picsum.photos/400/300?random=1',
-            'https://picsum.photos/400/300?random=2',
-            'https://picsum.photos/400/300?random=3',
-            'https://picsum.photos/400/300?random=4',
-            'https://picsum.photos/400/300?random=5',
-            'https://picsum.photos/400/300?random=6'
-        ];
-
-        // 그리드 레이아웃 설정 함수 (개선된 동적 정렬)
-        function getGridLayout(count) {
-            const layouts = {
-                2: {
-                    grid: 'grid-cols-1 md:grid-cols-2',
-                    maxWidth: 'max-w-6xl'
-                },
-                6: {
-                    grid: 'grid-cols-2 md:grid-cols-3',
-                    maxWidth: 'max-w-8xl'
+        // --- API 호출 ---
+        async function fetchQuizData() {
+            try {
+                const response = await fetch(`/api/get-quiz-images?category=${encodeURIComponent(category)}&count=${gameState.imageCount}`);
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || '퀴즈 데이터를 불러오는 데 실패했습니다.');
                 }
-            };
-            return layouts[count] || layouts[2];
+                return await response.json();
+            } catch (error) {
+                alert(error.message);
+                window.location.href = '/category'; // 오류 발생 시 카테고리 페이지로 이동
+            }
         }
 
+        // --- UI 생성 및 업데이트 ---
+        function getGridLayout(count) {
+            return count === 6 ? 'grid-cols-2 md:grid-cols-3' : 'grid-cols-1 md:grid-cols-2';
+        }
 
-        // 이미지 그리드 생성 함수
-        function createImageGrid(count) {
+        function createImageGrid(quizData) {
             const grid = elements.imageGrid;
-            const layout = getGridLayout(count);
-
-            grid.className = `grid gap-8 mb-8 ${layout.grid} mx-auto ${layout.maxWidth}`;
+            grid.className = `grid gap-6 mb-8 ${getGridLayout(gameState.imageCount)}`;
             grid.innerHTML = '';
 
-            gameState.correctAnswer = Math.floor(Math.random() * count);
+            gameState.correctAnswer = quizData.correctAnswer;
 
-            for (let i = 0; i < count; i++) {
-                const imageCard = createImageCard(i);
-                grid.appendChild(imageCard);
-            }
-        }
+            quizData.images.forEach((imageUrl, index) => {
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:-translate-y-1';
+                card.dataset.index = index;
 
-        // 이미지 카드 생성 함수
-        function createImageCard(index) {
-            const card = document.createElement('div');
-            card.className = 'bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:-translate-y-1';
-            card.dataset.index = index;
+                const imageHeight = gameState.imageCount === 6 ? 'h-[25vh]' : 'h-[40vh]';
 
-            const getImageHeight = (count) => {
-                const heights = {
-                    2: 'h-[40vh]',
-                    6: 'h-[25vh]'
-                };
-                return heights[count] || 'h-[40vh]';
-            };
-
-            card.innerHTML = `
-                <div class="p-4">
-                    <div class="relative overflow-hidden rounded-lg mb-3">
-                        <img src="${sampleImages[index % sampleImages.length]}"
-                            alt="이미지 ${index + 1}"
-                            class="w-full ${getImageHeight(gameState.imageCount)} object-cover transition-transform duration-300 hover:scale-105">
+                card.innerHTML = `
+                    <div class="p-4">
+                        <div class="relative overflow-hidden rounded-lg">
+                            <img src="${imageUrl}" alt="이미지 ${index + 1}" class="w-full ${imageHeight} object-cover">
+                        </div>
                     </div>
-                </div>
-            `;
-
-            card.addEventListener('click', () => selectImage(index));
-
-            return card;
+                `;
+                card.addEventListener('click', () => selectImage(index));
+                grid.appendChild(card);
+            });
         }
 
-        // 이미지 선택 함수
+        // --- 게임 로직 함수 ---
         function selectImage(index) {
             if (gameState.selectedAnswer !== null) return;
-
             gameState.selectedAnswer = index;
-            const selectedCard = document.querySelector(`[data-index="${index}"]`);
 
-            selectedCard.classList.add('ring-4', 'ring-blue-500');
-
-            setTimeout(() => {
-                showResult(index === gameState.correctAnswer);
-            }, 500);
+            document.querySelector(`[data-index="${index}"]`).classList.add('ring-4', 'ring-blue-500');
+            setTimeout(() => showResult(index === gameState.correctAnswer), 500);
         }
 
-        // 결과 표시 함수
         function showResult(isCorrect) {
-            const resultMessage = elements.resultMessage;
-            const resultContent = elements.resultContent;
-
-            resultMessage.classList.remove('hidden');
-
+            elements.resultMessage.classList.remove('hidden');
             if (isCorrect) {
                 gameState.score += 10;
-                resultContent.innerHTML = `
-                    <div class="text-green-600">
-                        <div class="text-3xl mb-3">🎉 정답!</div>
-                        <div class="text-lg">+10점 획득</div>
-                    </div>
-                `;
-                resultMessage.classList.add('bg-green-50', 'border-2', 'border-green-200');
+                elements.resultContent.innerHTML = `<div class="text-green-600"><div class="text-3xl mb-3">🎉 정답!</div><div class="text-lg">+10점 획득</div></div>`;
+                elements.resultMessage.className = 'bg-green-50 border-2 border-green-200 rounded-lg shadow-md p-6 text-center mb-8';
             } else {
-                resultContent.innerHTML = `
-                    <div class="text-red-600">
-                        <div class="text-3xl mb-3">❌ 틀렸습니다</div>
-                        <div class="text-lg">정답은 ${gameState.correctAnswer + 1}번 이미지였습니다</div>
-                    </div>
-                `;
-                resultMessage.classList.add('bg-red-50', 'border-2', 'border-red-200');
+                elements.resultContent.innerHTML = `<div class="text-red-600"><div class="text-3xl mb-3">❌ 틀렸습니다</div><div class="text-lg">AI가 생성한 이미지는 ${gameState.correctAnswer + 1}번이었습니다</div></div>`;
+                elements.resultMessage.className = 'bg-red-50 border-2 border-red-200 rounded-lg shadow-md p-6 text-center mb-8';
             }
-
-            elements.currentScore.textContent = gameState.score;
+            updateScore();
             elements.nextBtn.disabled = false;
             elements.nextBtn.classList.remove('opacity-50', 'cursor-not-allowed', 'hidden');
             elements.skipBtn.classList.add('hidden');
         }
 
-        // 다음 문제로 이동
-        function nextQuestion() {
+        async function nextQuestion() {
             if (gameState.currentQuestion >= gameState.totalQuestions) {
-                const correctAnswers = gameState.score / 10;
-                const category = document.getElementById('currentCategory').textContent;
-                const url = `/result?score=${gameState.score}&correct=${correctAnswers}&total=${gameState.totalQuestions}&difficulty=${gameState.difficulty}&category=${encodeURIComponent(category)}`;
-                window.location.href = url;
+                const correct = gameState.score / 10;
+                window.location.href = `/result?score=${gameState.score}&correct=${correct}&total=${gameState.totalQuestions}&difficulty=${gameState.difficulty}&category=${encodeURIComponent(category)}`;
                 return;
             }
-
             gameState.currentQuestion++;
             gameState.selectedAnswer = null;
-
             elements.currentQuestion.textContent = gameState.currentQuestion;
-
             elements.resultMessage.classList.add('hidden');
-            elements.resultMessage.classList.remove('bg-green-50', 'border-green-200', 'bg-red-50', 'border-red-200', 'border-2');
-
             elements.nextBtn.disabled = true;
             elements.nextBtn.classList.add('opacity-50', 'cursor-not-allowed', 'hidden');
             elements.skipBtn.classList.remove('hidden');
 
-            createImageGrid(gameState.imageCount);
+            const quizData = await fetchQuizData();
+            if(quizData) createImageGrid(quizData);
         }
 
-        // 이벤트 리스너 설정
+        function updateScore() {
+            elements.currentScore.textContent = gameState.score;
+        }
+
+        // --- 초기화 및 이벤트 리스너 ---
         function setupEventListeners() {
-            elements.userButton.addEventListener('click', function(e) {
-                e.stopPropagation();
-                elements.userPopup.classList.toggle('hidden');
+            elements.skipBtn.addEventListener('click', () => {
+                if (confirm('이 문제를 건너뛰시겠습니까?')) nextQuestion();
             });
-
-            document.addEventListener('click', function(e) {
-                if (!elements.userPopup.contains(e.target) && !elements.userButton.contains(e.target)) {
-                    elements.userPopup.classList.add('hidden');
-                }
-            });
-
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape') {
-                    elements.userPopup.classList.add('hidden');
-                }
-            });
-
-            elements.skipBtn.addEventListener('click', function() {
-                if (confirm('이 문제를 건너뛰시겠습니까?')) {
-                    nextQuestion();
-                }
-            });
-
             elements.nextBtn.addEventListener('click', nextQuestion);
+            // (사용자 팝업 등 다른 이벤트 리스너는 여기에 추가)
         }
 
-        // 게임 초기화
-        function initGame() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const category = urlParams.get('category') || '알 수 없음';
-            document.getElementById('currentCategory').textContent = category;
-
-            elements.difficultyDisplay.textContent = getDifficultyDisplayName(gameState.difficulty);
-
+        async function initGame() {
+            elements.currentCategory.textContent = category;
+            elements.difficultyDisplay.textContent = gameState.difficulty === 'hard' ? 'Hard (6개)' : 'Easy (2개)';
             setupEventListeners();
-            createImageGrid(gameState.imageCount);
+
+            const quizData = await fetchQuizData();
+            if(quizData) createImageGrid(quizData);
         }
 
-        document.addEventListener('DOMContentLoaded', initGame);
-    </script>
+        initGame();
+    });
+</script>
 </body>
 </html>

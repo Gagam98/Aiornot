@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>카테고리 선택 - AI Quiz</title>
-    <link href="../static/css/main.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/main.css') }}" rel="stylesheet">
 </head>
 <body class="bg-gray-50 min-h-screen">
     <div class="container mx-auto px-4 py-8 max-w-8xl mt-12">
@@ -25,13 +26,13 @@
                                 </svg>
                             </div>
                             <div>
-                                <h3 class="font-semibold text-gray-800">사용자</h3>
-                                <p class="text-sm text-gray-500">user@example.com</p>
+                                <h3 id="popupUsername" class="font-semibold text-gray-800">사용자</h3>
+                                <p id="popupEmail" class="text-sm text-gray-500">정보를 불러오는 중...</p>
                             </div>
                         </div>
                     </div>
                     <div class="py-2">
-                        <a href="#" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors duration-150">
+                        <a href="#" id="logoutButton" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors duration-150">
                             <div class="flex items-center space-x-2">
                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -69,7 +70,7 @@
             <div class="category-card bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:-translate-y-1">
                 <div class="p-6">
                     <div class="w-full h-60 bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg mb-4 flex items-center justify-center">
-                        <img src="../static/images/cat.jpg" alt="고양이 카테고리 이미지" class="w-full h-full object-cover rounded-lg shadow-md" />
+                        <img src="{{ url_for('static', filename='images/cat.jpg') }}" alt="고양이 카테고리 이미지" class="w-full h-full object-cover rounded-lg shadow-md" />
                     </div>
                     <h3 class="text-2xl font-bold text-gray-800 mb-2">고양이</h3>
                     <p class="text-gray-600 text-lg">샴 등 다양한 품종의 고양이에 대한 퀴즈</p>
@@ -79,7 +80,7 @@
             <div class="category-card bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:-translate-y-1">
                 <div class="p-6">
                     <div class="w-full h-60 bg-gradient-to-br from-amber-400 to-amber-600 rounded-lg mb-4 flex items-center justify-center">
-                        <img src="../static/images/icecream.jpg" alt="아이스크림 카테고리 이미지" class="w-full h-full object-cover rounded-lg shadow-md" />
+                        <img src="{{ url_for('static', filename='images/icecream.jpg') }}" alt="아이스크림 카테고리 이미지" class="w-full h-full object-cover rounded-lg shadow-md" />
                     </div>
                     <h3 class="text-2xl font-bold text-gray-800 mb-2">아이스크림</h3>
                     <p class="text-gray-600 text-lg">한국사, 세계사, 근현대사 등 역사 관련 퀴즈</p>
@@ -89,7 +90,7 @@
             <div class="category-card bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:-translate-y-1">
                 <div class="p-6">
                     <div class="w-full h-60 bg-gradient-to-br from-purple-400 to-purple-600 rounded-lg mb-4 flex items-center justify-center">
-                        <img src="../static/images/rose.jpg" alt="장미 카테고리 이미지" class="w-full h-full object-cover rounded-lg shadow-md" />
+                        <img src="{{ url_for('static', filename='images/rose.jpg') }}" alt="장미 카테고리 이미지" class="w-full h-full object-cover rounded-lg shadow-md" />
                     </div>
                     <h3 class="text-2xl font-bold text-gray-800 mb-2">장미</h3>
                     <p class="text-gray-600 text-lg">고전문학, 현대문학, 세계문학 등 문학 관련 퀴즈</p>
@@ -99,7 +100,7 @@
             <div class="category-card bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:-translate-y-1">
                 <div class="p-6">
                     <div class="w-full h-60 bg-gradient-to-br from-green-400 to-green-600 rounded-lg mb-4 flex items-center justify-center">
-                        <img src="../static/images/fruits.jpg" alt="과일 카테고리 이미지" class="w-full h-full object-cover rounded-lg shadow-md" />
+                        <img src="{{ url_for('static', filename='images/fruits.jpg') }}" alt="과일 카테고리 이미지" class="w-full h-full object-cover rounded-lg shadow-md" />
                     </div>
                     <h3 class="text-2xl font-bold text-gray-800 mb-2">과일</h3>
                     <p class="text-gray-600 text-lg">세계 지리, 한국 지리, 자연지리 등 지리 관련 퀴즈</p>
@@ -141,78 +142,119 @@
     </div>
 
     <script>
-        // 사용자 팝업 기능
-        const userButton = document.getElementById('userButton');
-        const userPopup = document.getElementById('userPopup');
+        document.addEventListener('DOMContentLoaded', function() {
+            const token = localStorage.getItem('accessToken');
 
-        userButton.addEventListener('click', function(e) {
-            e.stopPropagation();
-            userPopup.classList.toggle('hidden');
-        });
-
-        // 팝업 외부 클릭 시 닫기
-        document.addEventListener('click', function(e) {
-            if (!userPopup.contains(e.target) && !userButton.contains(e.target)) {
-                userPopup.classList.add('hidden');
+            if (!token) {
+                alert('로그인이 필요합니다.');
+                window.location.href = '/welcome';
+                return;
             }
-        });
 
-        // ESC 키로 팝업 닫기
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                userPopup.classList.add('hidden');
-            }
-        });
+            const userButton = document.getElementById('userButton');
+            const userPopup = document.getElementById('userPopup');
 
-        // 검색 기능
-        const searchInput = document.getElementById('searchInput');
-        const categoryCards = document.querySelectorAll('.category-card');
-        const noResults = document.getElementById('noResults');
-        const categoryGrid = document.getElementById('categoryGrid');
+            userButton.addEventListener('click', function(e) {
+                e.stopPropagation();
+                userPopup.classList.toggle('hidden');
+            });
 
-        searchInput.addEventListener('input', function() {
-            const searchTerm = this.value.toLowerCase().trim();
-            let visibleCards = 0;
-
-            categoryCards.forEach(card => {
-                const title = card.querySelector('h3').textContent.toLowerCase();
-                const description = card.querySelector('p').textContent.toLowerCase();
-
-                if (title.includes(searchTerm) || description.includes(searchTerm)) {
-                    card.style.display = 'block';
-                    visibleCards++;
-                } else {
-                    card.style.display = 'none';
+            document.addEventListener('click', function(e) {
+                if (!userPopup.contains(e.target) && !userButton.contains(e.target)) {
+                    userPopup.classList.add('hidden');
                 }
             });
 
-            // 검색 결과가 없을 때 메시지 표시
-            if (visibleCards === 0 && searchTerm !== '') {
-                noResults.classList.remove('hidden');
-                categoryGrid.classList.add('hidden');
-            } else {
-                noResults.classList.add('hidden');
-                categoryGrid.classList.remove('hidden');
+            async function fetchUserInfo() {
+                try {
+                    const response = await fetch('/auth/verify-token', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        document.getElementById('popupUsername').textContent = data.username;
+                        document.getElementById('popupEmail').textContent = '로그인 됨';
+                    } else {
+                        throw new Error('인증 실패');
+                    }
+                } catch (error) {
+                    console.error('사용자 정보 로딩 실패:', error);
+                    localStorage.removeItem('accessToken');
+                    localStorage.removeItem('username');
+                    alert('세션이 만료되었거나 유효하지 않습니다. 다시 로그인해주세요.');
+                    window.location.href = '/welcome';
+                }
             }
-        });
 
-        // 카테고리 카드 클릭 이벤트
-        categoryCards.forEach(card => {
-            card.addEventListener('click', function() {
-                const categoryName = this.querySelector('h3').textContent;
-                // 카테고리 선택 후 levelselect.html로 이동
-                window.location.href = `./levelselect?category=${encodeURIComponent(categoryName)}`;
+            fetchUserInfo();
+
+            const logoutButton = document.getElementById('logoutButton');
+            logoutButton.addEventListener('click', async function(e) {
+                e.preventDefault();
+                try {
+                    const response = await fetch('/auth/logout', {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+
+                    if (response.ok) {
+                        alert('로그아웃되었습니다.');
+                    }
+                } catch (error) {
+                    console.error('로그아웃 요청 실패:', error);
+                } finally {
+                    localStorage.removeItem('accessToken');
+                    localStorage.removeItem('username');
+                    window.location.href = '/welcome';
+                }
             });
-        });
 
-        // 카드 호버 효과 개선
-        categoryCards.forEach(card => {
-            card.addEventListener('mouseenter', function() {
-                this.style.transform = 'translateY(-8px)';
+            const searchInput = document.getElementById('searchInput');
+            const categoryCards = document.querySelectorAll('.category-card');
+            const noResults = document.getElementById('noResults');
+            const categoryGrid = document.getElementById('categoryGrid');
+
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase().trim();
+                let visibleCards = 0;
+
+                categoryCards.forEach(card => {
+                    const title = card.querySelector('h3').textContent.toLowerCase();
+                    const description = card.querySelector('p').textContent.toLowerCase();
+
+                    if (title.includes(searchTerm) || description.includes(searchTerm)) {
+                        card.style.display = 'block';
+                        visibleCards++;
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+
+                if (visibleCards === 0 && searchTerm !== '') {
+                    noResults.classList.remove('hidden');
+                    categoryGrid.classList.add('hidden');
+                } else {
+                    noResults.classList.add('hidden');
+                    categoryGrid.classList.remove('hidden');
+                }
             });
 
-            card.addEventListener('mouseleave', function() {
-                this.style.transform = 'translateY(0)';
+            categoryCards.forEach(card => {
+                card.addEventListener('click', function() {
+                    const categoryName = this.querySelector('h3').textContent;
+                    window.location.href = `./levelselect?category=${encodeURIComponent(categoryName)}`;
+                });
+            });
+
+            categoryCards.forEach(card => {
+                card.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-8px)';
+                });
+
+                card.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0)';
+                });
             });
         });
     </script>

@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Login</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link href="{{ url_for('static', filename='css/main.css') }}" rel="stylesheet">
 </head>
 <body class="m-0 p-0 h-screen w-screen flex items-center justify-center">
 
@@ -32,38 +34,36 @@
   </div>
 
   <script>
-    document.getElementById('loginForm').addEventListener('submit', async function(event) {
-      event.preventDefault(); // 폼의 기본 동작(페이지 새로고침) 방지
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
 
-      const id = document.getElementById('id').value;
-      const password = document.getElementById('pw').value;
+            const id = document.getElementById('id').value;
+            // 오류 수정을 위해 'password'를 HTML의 id인 'pw'로 변경
+            const password = document.getElementById('pw').value;
 
-      try {
-        const response = await fetch('/auth/login', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ id: id, password: password }),
+            try {
+                const response = await fetch('/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    localStorage.setItem('accessToken', data.access_token);
+                    localStorage.setItem('username', data.username);
+                    alert('로그인 성공!');
+                    window.location.href = '/category';
+                } else {
+                    alert(data.message || '로그인에 실패했습니다.');
+                }
+            } catch (error) {
+                console.error('로그인 요청 오류:', error);
+                alert('로그인 중 오류가 발생했습니다.');
+            }
         });
-
-        const data = await response.json();
-
-        if (response.ok) {
-          // 로그인 성공 시 토큰 저장 및 페이지 이동
-          localStorage.setItem('accessToken', data.access_token);
-          alert('로그인 성공!');
-          window.location.href = '/category'; // category 페이지로 이동
-        } else {
-          // 로그인 실패 시 에러 메시지 표시
-          alert(data.message);
-        }
-      } catch (error) {
-        console.error('로그인 요청 중 오류 발생:', error);
-        alert('로그인 처리 중 오류가 발생했습니다.');
-      }
-    });
-  </script>
+    </script>
 
 </body>
 </html>
