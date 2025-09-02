@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>로그인</title>
+    <style>
+        /* 페이지 전체 스타일 */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f2f5;
+        }
+
+        /* 로그인 폼 컨테이너 */
+        .login-container {
+            background: #ffffff;
+            padding: 2.5rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            box-sizing: border-box;
+        }
+        h1 { text-align: center; color: #1c1e21; margin-bottom: 1.5rem; }
+        .form-group { margin-bottom: 1rem; }
+        label { display: block; margin-bottom: 0.5rem; color: #4b4f56; font-weight: 600; }
+        input[type="text"], input[type="password"] { width: 100%; padding: 0.75rem; border: 1px solid #dddfe2; border-radius: 6px; box-sizing: border-box; font-size: 1rem; }
+        input:focus { border-color: #1877f2; outline: none; }
+        .login-btn { width: 100%; padding: 0.75rem; background-color: #1877f2; border: none; border-radius: 6px; color: white; font-size: 1.1rem; font-weight: 600; cursor: pointer; margin-top: 1rem; }
+        .login-btn:hover { background-color: #166fe5; }
+        .links { text-align: center; margin-top: 1rem; }
+        .links a { color: #1877f2; text-decoration: none; font-size: 0.9rem; }
+        .links a:hover { text-decoration: underline; }
+        .message { text-align: center; margin-top: 1rem; font-weight: 600; }
+        .error { color: #fa3e3e; }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h1>로그인</h1>
+        <form id="login-form">
+            <div class="form-group">
+                <label for="username">아이디 또는 이메일</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            <div class="form-group">
+                <label for="password">비밀번호</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <button type="submit" class="login-btn">로그인</button>
+        </form>
+        <p id="error-message" class="message error"></p>
+        <div class="links">
+            <a href="/auth/register">회원가입</a> | <a href="#">비밀번호를 잊으셨나요?</a>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('login-form').addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorMessage = document.getElementById('error-message');
+            errorMessage.textContent = '';
+
+            try {
+                const response = await fetch('/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // 로그인 성공 시 토큰과 사용자명을 localStorage에 저장
+                    localStorage.setItem('access_token', data.access_token);
+                    localStorage.setItem('username', data.username);
+
+                    window.location.href = '/main';
+                } else {
+                    errorMessage.textContent = data.message || '로그인에 실패했습니다.';
+                }
+            } catch (error) {
+                errorMessage.textContent = '서버와 통신 중 오류가 발생했습니다.';
+                console.error('Login error:', error);
+            }
+        });
+    </script>
+</body>
+</html>
