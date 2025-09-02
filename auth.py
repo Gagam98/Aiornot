@@ -18,14 +18,13 @@ def on_load(state):
         jti = jwt_payload['jti']
         return jti in blacklisted_tokens
 
-@auth_bp.route('/register', methods=['GET', 'POST'])
+@auth_bp.route('/register', methods=['POST'])
 def register():
-    if request.method == 'GET':
-        return render_template('register.html')
-
     try:
         data = request.get_json()
-        username = data.get('username', '').strip()
+        # HTML의 id, email, pw 필드명을 받아 처리
+
+        username = data.get('id', '').strip()
         email = data.get('email', '').strip()
         password = data.get('password', '')
 
@@ -35,7 +34,7 @@ def register():
             return jsonify({'message': '비밀번호는 최소 6자 이상이어야 합니다'}), 400
 
         if mongo.db.users.find_one({"username": username}):
-            return jsonify({'message': '이미 존재하는 사용자명입니다'}), 400
+            return jsonify({'message': '이미 존재하는 ID입니다'}), 400
         if mongo.db.users.find_one({"email": email}):
             return jsonify({'message': '이미 존재하는 이메일입니다'}), 400
 
@@ -50,18 +49,18 @@ def register():
         return jsonify({'message': '회원가입이 완료되었습니다', 'user_id': str(user_id)}), 201
 
     except Exception as e:
-        print(f"An error occurred during registration: {e}") # 디버깅을 위해 에러 출력
-        return jsonify({'message': f'서버 오류가 발생했습니다: {e}'}), 500
+        return jsonify({'message': f'서버 오류: {e}'}), 500
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
     try:
         data = request.get_json()
-        username = data.get('username', '').strip()
+        # HTML의 id 필드명을 받아 username으로 사용
+        username = data.get('id', '').strip()
         password = data.get('password', '')
 
         if not username or not password:
-            return jsonify({'message': '사용자명과 비밀번호를 입력해주세요'}), 400
+            return jsonify({'message': 'ID와 비밀번호를 입력해주세요'}), 400
 
         user = mongo.db.users.find_one({"$or": [{"username": username}, {"email": username}]})
 
@@ -76,11 +75,10 @@ def login():
                 'username': user['username']
             }), 200
 
-        return jsonify({'message': '잘못된 사용자명 또는 비밀번호입니다'}), 401
+        return jsonify({'message': '잘못된 ID 또는 비밀번호입니다'}), 401
 
     except Exception as e:
-        print(f"An error occurred during login: {e}") # 디버깅을 위해 에러 출력
-        return jsonify({'message': f'서버 오류가 발생했습니다: {e}'}), 500
+        return jsonify({'message': f'서버 오류: {e}'}), 500
 
 @auth_bp.route('/logout', methods=['POST'])
 @jwt_required()

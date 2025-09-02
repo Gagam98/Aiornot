@@ -1,99 +1,69 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>로그인</title>
-    <style>
-        /* 페이지 전체 스타일 */
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            background-color: #f0f2f5;
-        }
-
-        /* 로그인 폼 컨테이너 */
-        .login-container {
-            background: #ffffff;
-            padding: 2.5rem;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            width: 100%;
-            max-width: 400px;
-            box-sizing: border-box;
-        }
-        h1 { text-align: center; color: #1c1e21; margin-bottom: 1.5rem; }
-        .form-group { margin-bottom: 1rem; }
-        label { display: block; margin-bottom: 0.5rem; color: #4b4f56; font-weight: 600; }
-        input[type="text"], input[type="password"] { width: 100%; padding: 0.75rem; border: 1px solid #dddfe2; border-radius: 6px; box-sizing: border-box; font-size: 1rem; }
-        input:focus { border-color: #1877f2; outline: none; }
-        .login-btn { width: 100%; padding: 0.75rem; background-color: #1877f2; border: none; border-radius: 6px; color: white; font-size: 1.1rem; font-weight: 600; cursor: pointer; margin-top: 1rem; }
-        .login-btn:hover { background-color: #166fe5; }
-        .links { text-align: center; margin-top: 1rem; }
-        .links a { color: #1877f2; text-decoration: none; font-size: 0.9rem; }
-        .links a:hover { text-decoration: underline; }
-        .message { text-align: center; margin-top: 1rem; font-weight: 600; }
-        .error { color: #fa3e3e; }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login</title>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-    <div class="login-container">
-        <h1>로그인</h1>
-        <form id="login-form">
-            <div class="form-group">
-                <label for="username">아이디 또는 이메일</label>
-                <input type="text" id="username" name="username" required>
-            </div>
-            <div class="form-group">
-                <label for="password">비밀번호</label>
-                <input type="password" id="password" name="password" required>
-            </div>
-            <button type="submit" class="login-btn">로그인</button>
-        </form>
-        <p id="error-message" class="message error"></p>
-        <div class="links">
-            <a href="/auth/register">회원가입</a> | <a href="#">비밀번호를 잊으셨나요?</a>
-        </div>
-    </div>
+<body class="m-0 p-0 h-screen w-screen flex items-center justify-center">
 
-    <script>
-        document.getElementById('login-form').addEventListener('submit', async function(event) {
-            event.preventDefault();
+  <div class="bg-white rounded-2xl p-12 w-96 text-center"
+       style="box-shadow: 0 25px 50px rgba(0,0,0,0.15);">
 
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            const errorMessage = document.getElementById('error-message');
-            errorMessage.textContent = '';
+    <h2 class="text-3xl font-bold mb-6">LOGIN</h2>
 
-            try {
-                const response = await fetch('/auth/login', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ username, password })
-                });
+    <form id="loginForm">
+      <div class="mb-4 text-left">
+        <label class="block mb-1 font-semibold" for="id">ID</label>
+        <input id="id" type="text" class="border border-gray-300 rounded-lg p-2 w-full" required>
+      </div>
 
-                const data = await response.json();
+      <div class="mb-6 text-left">
+        <label class="block mb-1 font-semibold" for="pw">PW</label>
+        <input id="pw" type="password" class="border border-gray-300 rounded-lg p-2 w-full" required>
+      </div>
 
-                if (response.ok) {
-                    // 로그인 성공 시 토큰과 사용자명을 localStorage에 저장
-                    localStorage.setItem('access_token', data.access_token);
-                    localStorage.setItem('username', data.username);
+      <div class="flex justify-between">
+        <a href="/signup" class="bg-gray-300 text-black font-bold py-2 px-6 rounded-lg hover:bg-gray-400 transition">회원가입</a>
+        <button type="submit" class="bg-blue-950 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition">로그인</button>
+      </div>
+    </form>
+  </div>
 
-                    window.location.href = '/main';
-                } else {
-                    errorMessage.textContent = data.message || '로그인에 실패했습니다.';
-                }
-            } catch (error) {
-                errorMessage.textContent = '서버와 통신 중 오류가 발생했습니다.';
-                console.error('Login error:', error);
-            }
+  <script>
+    document.getElementById('loginForm').addEventListener('submit', async function(event) {
+      event.preventDefault(); // 폼의 기본 동작(페이지 새로고침) 방지
+
+      const id = document.getElementById('id').value;
+      const password = document.getElementById('pw').value;
+
+      try {
+        const response = await fetch('/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ id: id, password: password }),
         });
-    </script>
+
+        const data = await response.json();
+
+        if (response.ok) {
+          // 로그인 성공 시 토큰 저장 및 페이지 이동
+          localStorage.setItem('accessToken', data.access_token);
+          alert('로그인 성공!');
+          window.location.href = '/category'; // category 페이지로 이동
+        } else {
+          // 로그인 실패 시 에러 메시지 표시
+          alert(data.message);
+        }
+      } catch (error) {
+        console.error('로그인 요청 중 오류 발생:', error);
+        alert('로그인 처리 중 오류가 발생했습니다.');
+      }
+    });
+  </script>
+
 </body>
 </html>

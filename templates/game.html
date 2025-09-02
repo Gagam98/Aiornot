@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Quiz 게임</title>
+    <link href="../static/css/main.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-8xl mt-12">
+        <div class="relative mb-8">
+            <div class="absolute top-0 right-0">
+                <button id="userButton" class="p-2 rounded-full bg-white shadow-lg hover:shadow-xl transition-all duration-200 hover:bg-gray-50">
+                    <svg class="w-8 h-8 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                </button>
+
+                <div id="userPopup" class="hidden absolute top-12 right-0 w-64 bg-white rounded-lg shadow-xl border border-gray-200 z-50">
+                    <div class="p-4 border-b border-gray-100">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-12 h-12 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center">
+                                <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-gray-800">사용자</h3>
+                                <p class="text-sm text-gray-500">user@example.com</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="py-2">
+                        <a href="#" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors duration-150">
+                            <div class="flex items-center space-x-2">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                </svg>
+                                <span>로그아웃</span>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="absolute top-0 left-0">
+                <button id="homeBtn" class="p-2 rounded-full bg-white shadow-lg hover:shadow-xl transition-all duration-200 hover:bg-gray-50" onclick="window.location.href='/category'">
+                    <svg class="w-8 h-8 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                    </svg>
+                </button>
+            </div>
+
+
+            <div class="text-center">
+                <h1 class="text-4xl font-bold text-gray-800 mb-2">AI or NOT</h1>
+                <p class="text-xl text-gray-600">둘 중 어느 것이 AI일까요?</p>
+            </div>
+        </div>
+
+        <div class="mb-8">
+            <div class="flex justify-center items-center space-x-6 mb-6 flex-wrap gap-y-3">
+                <div class="bg-white px-4 py-2 rounded-full shadow-md">
+                    <span class="text-lg text-gray-600">카테고리:</span>
+                    <span id="currentCategory" class="font-semibold text-blue-600 ml-1 text-1xl">과학</span>
+                </div>
+                <div class="bg-white px-4 py-2 rounded-full shadow-md">
+                    <span class="text-lg text-gray-600">문제:</span>
+                    <span id="currentQuestion" class="font-semibold text-gray-800 ml-1">1</span>
+                    <span class="text-gray-600">/</span>
+                    <span id="totalQuestions" class="text-gray-600">10</span>
+                </div>
+                <div class="bg-white px-4 py-2 rounded-full shadow-md">
+                    <span class="text-lg text-gray-600">점수:</span>
+                    <span id="currentScore" class="font-semibold text-green-600 ml-1">0</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-8">
+            <div class="relative max-w-6xl mx-auto">
+                <div class="flex justify-center items-center space-x-4 bg-white rounded-lg shadow-md p-4">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-sm font-medium text-gray-700">난이도:</span>
+                        <span id="difficultyDisplay" class="font-semibold text-blue-600"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="relative">
+            <div id="imageGrid" class="grid gap-6 mb-8">
+                </div>
+        </div>
+
+        <div class="flex justify-center space-x-4 mb-8">
+            <button id="skipBtn" class="bg-indigo-500 text-white px-6 py-3 rounded-lg hover:bg-pink-600 transition-colors duration-200">
+                건너뛰기
+            </button>
+            <button id="nextBtn" class="hidden bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors duration-200 opacity-50 cursor-not-allowed" disabled>
+                다음 문제
+            </button>
+        </div>
+
+        <div id="resultMessage" class="hidden bg-white rounded-lg shadow-md p-6 text-center mb-8">
+            <div id="resultContent" class="text-lg font-semibold"></div>
+        </div>
+    </div>
+
+    <script>
+        // URL 파라미터에서 난이도 가져오기
+        function getDifficultyFromURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const difficulty = urlParams.get('difficulty') || 'easy';
+            return difficulty.toLowerCase();
+        }
+
+        // 난이도에 따른 이미지 개수 결정
+        function getImageCountByDifficulty(difficulty) {
+            const difficultyMap = {
+                'easy': 2,
+                'hard': 6
+            };
+            return difficultyMap[difficulty] || 2;
+        }
+
+        // 난이도 표시명 가져오기
+        function getDifficultyDisplayName(difficulty) {
+            const displayMap = {
+                'easy': 'Easy (2개)',
+                'hard': 'Hard (6개)'
+            };
+            return displayMap[difficulty] || 'Easy (2개)';
+        }
+
+        // 게임 상태 관리
+        const currentDifficulty = getDifficultyFromURL();
+        let gameState = {
+            currentQuestion: 1,
+            totalQuestions: 10,
+            score: 0,
+            selectedAnswer: null,
+            correctAnswer: null,
+            difficulty: currentDifficulty,
+            imageCount: getImageCountByDifficulty(currentDifficulty)
+        };
+
+        // DOM 요소들
+        const elements = {
+            userButton: document.getElementById('userButton'),
+            userPopup: document.getElementById('userPopup'),
+            imageGrid: document.getElementById('imageGrid'),
+            difficultyDisplay: document.getElementById('difficultyDisplay'),
+            skipBtn: document.getElementById('skipBtn'),
+            nextBtn: document.getElementById('nextBtn'),
+            resultMessage: document.getElementById('resultMessage'),
+            resultContent: document.getElementById('resultContent'),
+            currentQuestion: document.getElementById('currentQuestion'),
+            currentScore: document.getElementById('currentScore')
+        };
+
+        // 샘플 이미지 데이터 (실제로는 서버에서 받아올 데이터)
+        const sampleImages = [
+            'https://picsum.photos/400/300?random=1',
+            'https://picsum.photos/400/300?random=2',
+            'https://picsum.photos/400/300?random=3',
+            'https://picsum.photos/400/300?random=4',
+            'https://picsum.photos/400/300?random=5',
+            'https://picsum.photos/400/300?random=6'
+        ];
+
+        // 그리드 레이아웃 설정 함수 (개선된 동적 정렬)
+        function getGridLayout(count) {
+            const layouts = {
+                2: {
+                    grid: 'grid-cols-1 md:grid-cols-2',
+                    maxWidth: 'max-w-6xl'
+                },
+                6: {
+                    grid: 'grid-cols-2 md:grid-cols-3',
+                    maxWidth: 'max-w-8xl'
+                }
+            };
+            return layouts[count] || layouts[2];
+        }
+
+
+        // 이미지 그리드 생성 함수
+        function createImageGrid(count) {
+            const grid = elements.imageGrid;
+            const layout = getGridLayout(count);
+
+            grid.className = `grid gap-8 mb-8 ${layout.grid} mx-auto ${layout.maxWidth}`;
+            grid.innerHTML = '';
+
+            gameState.correctAnswer = Math.floor(Math.random() * count);
+
+            for (let i = 0; i < count; i++) {
+                const imageCard = createImageCard(i);
+                grid.appendChild(imageCard);
+            }
+        }
+
+        // 이미지 카드 생성 함수
+        function createImageCard(index) {
+            const card = document.createElement('div');
+            card.className = 'bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:-translate-y-1';
+            card.dataset.index = index;
+
+            const getImageHeight = (count) => {
+                const heights = {
+                    2: 'h-[40vh]',
+                    6: 'h-[25vh]'
+                };
+                return heights[count] || 'h-[40vh]';
+            };
+
+            card.innerHTML = `
+                <div class="p-4">
+                    <div class="relative overflow-hidden rounded-lg mb-3">
+                        <img src="${sampleImages[index % sampleImages.length]}"
+                            alt="이미지 ${index + 1}"
+                            class="w-full ${getImageHeight(gameState.imageCount)} object-cover transition-transform duration-300 hover:scale-105">
+                    </div>
+                </div>
+            `;
+
+            card.addEventListener('click', () => selectImage(index));
+
+            return card;
+        }
+
+        // 이미지 선택 함수
+        function selectImage(index) {
+            if (gameState.selectedAnswer !== null) return;
+
+            gameState.selectedAnswer = index;
+            const selectedCard = document.querySelector(`[data-index="${index}"]`);
+
+            selectedCard.classList.add('ring-4', 'ring-blue-500');
+
+            setTimeout(() => {
+                showResult(index === gameState.correctAnswer);
+            }, 500);
+        }
+
+        // 결과 표시 함수
+        function showResult(isCorrect) {
+            const resultMessage = elements.resultMessage;
+            const resultContent = elements.resultContent;
+
+            resultMessage.classList.remove('hidden');
+
+            if (isCorrect) {
+                gameState.score += 10;
+                resultContent.innerHTML = `
+                    <div class="text-green-600">
+                        <div class="text-3xl mb-3">🎉 정답!</div>
+                        <div class="text-lg">+10점 획득</div>
+                    </div>
+                `;
+                resultMessage.classList.add('bg-green-50', 'border-2', 'border-green-200');
+            } else {
+                resultContent.innerHTML = `
+                    <div class="text-red-600">
+                        <div class="text-3xl mb-3">❌ 틀렸습니다</div>
+                        <div class="text-lg">정답은 ${gameState.correctAnswer + 1}번 이미지였습니다</div>
+                    </div>
+                `;
+                resultMessage.classList.add('bg-red-50', 'border-2', 'border-red-200');
+            }
+
+            elements.currentScore.textContent = gameState.score;
+            elements.nextBtn.disabled = false;
+            elements.nextBtn.classList.remove('opacity-50', 'cursor-not-allowed', 'hidden');
+            elements.skipBtn.classList.add('hidden');
+        }
+
+        // 다음 문제로 이동
+        function nextQuestion() {
+            if (gameState.currentQuestion >= gameState.totalQuestions) {
+                const correctAnswers = gameState.score / 10;
+                const category = document.getElementById('currentCategory').textContent;
+                const url = `/result?score=${gameState.score}&correct=${correctAnswers}&total=${gameState.totalQuestions}&difficulty=${gameState.difficulty}&category=${encodeURIComponent(category)}`;
+                window.location.href = url;
+                return;
+            }
+
+            gameState.currentQuestion++;
+            gameState.selectedAnswer = null;
+
+            elements.currentQuestion.textContent = gameState.currentQuestion;
+
+            elements.resultMessage.classList.add('hidden');
+            elements.resultMessage.classList.remove('bg-green-50', 'border-green-200', 'bg-red-50', 'border-red-200', 'border-2');
+
+            elements.nextBtn.disabled = true;
+            elements.nextBtn.classList.add('opacity-50', 'cursor-not-allowed', 'hidden');
+            elements.skipBtn.classList.remove('hidden');
+
+            createImageGrid(gameState.imageCount);
+        }
+
+        // 이벤트 리스너 설정
+        function setupEventListeners() {
+            elements.userButton.addEventListener('click', function(e) {
+                e.stopPropagation();
+                elements.userPopup.classList.toggle('hidden');
+            });
+
+            document.addEventListener('click', function(e) {
+                if (!elements.userPopup.contains(e.target) && !elements.userButton.contains(e.target)) {
+                    elements.userPopup.classList.add('hidden');
+                }
+            });
+
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    elements.userPopup.classList.add('hidden');
+                }
+            });
+
+            elements.skipBtn.addEventListener('click', function() {
+                if (confirm('이 문제를 건너뛰시겠습니까?')) {
+                    nextQuestion();
+                }
+            });
+
+            elements.nextBtn.addEventListener('click', nextQuestion);
+        }
+
+        // 게임 초기화
+        function initGame() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const category = urlParams.get('category') || '알 수 없음';
+            document.getElementById('currentCategory').textContent = category;
+
+            elements.difficultyDisplay.textContent = getDifficultyDisplayName(gameState.difficulty);
+
+            setupEventListeners();
+            createImageGrid(gameState.imageCount);
+        }
+
+        document.addEventListener('DOMContentLoaded', initGame);
+    </script>
+</body>
+</html>

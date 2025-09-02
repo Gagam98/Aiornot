@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign Up</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="m-0 p-0 h-screen w-screen flex items-center justify-center">
+
+  <div class="bg-white rounded-2xl p-12 w-96 text-center"
+       style="box-shadow: 0 25px 50px rgba(0,0,0,0.15);">
+
+    <h2 class="text-3xl font-bold mb-6">SIGN UP</h2>
+
+    <form id="signupForm">
+      <div class="mb-4 text-left">
+        <label class="block mb-1 font-semibold" for="id">ID</label>
+        <input id="id" type="text" class="border border-gray-300 rounded-lg p-2 w-full" required>
+      </div>
+
+      <div class="mb-4 text-left">
+        <label class="block mb-1 font-semibold" for="email">Email</label>
+        <input id="email" type="email" class="border border-gray-300 rounded-lg p-2 w-full" required>
+      </div>
+
+      <div class="mb-6 text-left">
+        <label class="block mb-1 font-semibold" for="pw">PW</label>
+        <input id="pw" type="password" class="border border-gray-300 rounded-lg p-2 w-full" required>
+      </div>
+
+      <div class="flex justify-between">
+        <a href="/welcome" class="bg-gray-300 text-black font-bold py-2 px-6 rounded-lg hover:bg-gray-400 transition">뒤로가기</a>
+        <button type="submit" class="bg-blue-950 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition">회원가입</button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    document.getElementById('signupForm').addEventListener('submit', async function(event) {
+        event.preventDefault();
+
+        const id = document.getElementById('id').value;
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('pw').value;
+
+        try {
+            const response = await fetch('/auth/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    id: id,
+                    email: email,
+                    password: password
+                }),
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                alert(data.message);
+                window.location.href = '/welcome'; // 성공 시 로그인 페이지로 이동
+            } else {
+                alert(data.message);
+            }
+        } catch (error) {
+            console.error('회원가입 요청 중 오류 발생:', error);
+            alert('회원가입 처리 중 오류가 발생했습니다.');
+        }
+    });
+  </script>
+
+</body>
+</html>
