@@ -64,9 +64,15 @@
                     <div class="w-64 h-64 mx-auto bg-gradient-to-br from-gray-200 to-gray-400 rounded-full flex items-center justify-center mb-6">
                         <img id="categoryImage" src="{{ url_for('static', filename='images/cat.jpg') }}" alt="카테고리 이미지" class="w-full h-full object-cover rounded-full shadow-md" />
                     </div>
-                     <h2 id="categoryTitle" class="text-3xl font-bold text-gray-800 mb-4">고양이 퀴즈</h2>
-                    <p class="text-xl text-gray-600 mb-2">어느 것이 AI가 생성한 이미지일까요?</p>
-                    <p class="text-lg text-gray-500">난이도를 선택하여 게임을 시작하세요!</p>
+                    <h2 id="categoryTitle" class="text-3xl font-bold text-gray-800 mb-4">고양이 퀴즈</h2>
+                    <p id="categoryDescription" class="text-xl text-gray-600 mb-2">어느 것이 AI가 생성한 이미지일까요?</p>
+                    <p class="text-lg text-gray-500">키워드를 선택하여 게임을 시작하세요!</p>
+
+                    <div id="customQuizInputContainer" class="hidden my-6">
+                        <input type="text" id="customKeywordInput" placeholder="퀴즈 주제가 될 키워드를 입력하세요 (예: 강아지)"
+                        class="w-full max-w-md mx-auto px-3 py-4 border border-gray-300 rounded-lg
+                        focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                    </div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -136,14 +142,14 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // --- 추가된 부분 시작 ---
+            // --- 유저 정보/로그아웃 로직 (기존과 동일) ---
             const token = localStorage.getItem('accessToken');
             if (!token) {
                 alert('로그인이 필요합니다.');
                 window.location.href = '/welcome';
                 return;
             }
-
+            // ... (기존의 유저 정보 관련 코드는 모두 여기에 위치)
             const userButton = document.getElementById('userButton');
             const userPopup = document.getElementById('userPopup');
 
@@ -158,7 +164,6 @@
                 }
             });
 
-            // --- 추가된 부분 시작 ---
             async function fetchUserInfo() {
                 try {
                     const response = await fetch('/auth/verify-token', {
@@ -184,17 +189,18 @@
                 localStorage.removeItem('username');
                 window.location.href = '/welcome';
             });
-            // --- 추가된 부분 끝 ---
 
-
+            // --- 카테고리 및 게임 시작 로직 ---
             const urlParams = new URLSearchParams(window.location.search);
             const category = urlParams.get('category');
 
-            // --- 추가/수정된 부분 시작 ---
             const categoryTitle = document.getElementById('categoryTitle');
             const categoryImage = document.getElementById('categoryImage');
 
-            // 카테고리 이름과 이미지 파일명을 매핑
+            // ▼▼▼ 수정된 부분 3: 로직 순서 및 안정성 강화 ▼▼▼
+            const categoryDescription = document.getElementById('categoryDescription');
+            const customQuizInputContainer = document.getElementById('customQuizInputContainer');
+
             const categoryData = {
                 '고양이': 'cat.jpg',
                 '아이스크림': 'icecream.jpg',
@@ -204,23 +210,45 @@
                 '나만퀴(나만의 퀴즈 만들기)': 'question.png'
             };
 
+            // 카테고리가 유효할 때만 아래 로직을 실행
             if (category && categoryData[category]) {
                 categoryTitle.textContent = `${category} 퀴즈`;
                 categoryImage.src = `/static/images/${categoryData[category]}`;
                 categoryImage.alt = `${category} 카테고리 이미지`;
+
+                // '나만퀴'일 경우 UI를 동적으로 변경
+                if (category === '나만퀴(나만의 퀴즈 만들기)') {
+                    categoryTitle.textContent = '나만의 퀴즈 만들기';
+                    categoryDescription.textContent = '원하는 퀴즈의 주제를 직접 입력하고 생성해보세요!';
+                    // HTML 요소가 확실히 존재할 때 클래스를 제거하므로 안전함
+                    customQuizInputContainer.classList.remove('hidden');
+                }
             }
-            // --- 추가/수정된 부분 끝 ---
 
             const easyModeBtn = document.getElementById('easyModeBtn');
             const hardModeBtn = document.getElementById('hardModeBtn');
 
-            easyModeBtn.addEventListener('click', function() {
-                window.location.href = `/game?difficulty=easy&category=${encodeURIComponent(category)}`;
-            });
+            // startGame 함수와 이벤트 리스너는 기존과 동일하게 잘 작성되어 있습니다.
+            function startGame(difficulty) {
+                let gameUrl = `/game?difficulty=${difficulty}&category=${encodeURIComponent(category)}`;
 
-            hardModeBtn.addEventListener('click', function() {
-                window.location.href = `/game?difficulty=hard&category=${encodeURIComponent(category)}`;
-            });
+                if (category === '나만퀴(나만의 퀴즈 만들기)') {
+                    const keywordInput = document.getElementById('customKeywordInput');
+                    const keyword = keywordInput.value.trim();
+
+                    if (!keyword) {
+                        alert('퀴즈를 만들 키워드를 입력해주세요!');
+                        keywordInput.focus();
+                        return;
+                    }
+                    gameUrl += `&keyword=${encodeURIComponent(keyword)}`;
+                }
+
+                window.location.href = gameUrl;
+            }
+
+            easyModeBtn.addEventListener('click', () => startGame('easy'));
+            hardModeBtn.addEventListener('click', () => startGame('hard'));
         });
     </script>
 </body>
