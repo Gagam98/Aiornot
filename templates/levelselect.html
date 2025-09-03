@@ -156,6 +156,30 @@
     </div>
 
     <script>
+        // 전역 스코프에 resumeGame 함수를 정의합니다.
+        let currentProgress = null;
+        window.resumeGame = function() {
+            if (currentProgress && currentProgress.quizSets) {
+                // 1. sessionStorage에 퀴즈 데이터 저장 (game.html로 전달하기 위해)
+                sessionStorage.setItem('resumeQuizData', JSON.stringify(currentProgress.quizSets));
+
+                // 2. game.html로 이동
+                let gameUrl = `/game?difficulty=${currentProgress.difficulty}&category=${encodeURIComponent(currentProgress.category)}&resume=true`;
+
+                // '나만퀴' 모드 키워드 처리
+                if (currentProgress.category.toLowerCase().includes('custom') || currentProgress.category === '나만퀴(나만의 퀴즈 만들기)') {
+                     if (currentProgress.keyword) {
+                         gameUrl += `&keyword=${encodeURIComponent(currentProgress.keyword)}`;
+                     }
+                }
+                window.location.href = gameUrl;
+            } else {
+                alert('이어할 게임 정보를 불러오는 데 실패했습니다. 새로 시작해주세요.');
+                document.getElementById('progressAlert').classList.add('hidden');
+            }
+        };
+
+
         document.addEventListener('DOMContentLoaded', function() {
             const token = localStorage.getItem('accessToken');
             if (!token) {
@@ -209,8 +233,7 @@
             // 카테고리 및 게임 시작 로직
             const urlParams = new URLSearchParams(window.location.search);
             const category = urlParams.get('category');
-
-            const categoryTitle = document.getElementById('categoryTitle');
+            const categoryTitleEl = document.getElementById('categoryTitle');
             const categoryImage = document.getElementById('categoryImage');
             const categoryDescription = document.getElementById('categoryDescription');
             const customQuizInputContainer = document.getElementById('customQuizInputContainer');
@@ -226,96 +249,80 @@
                 'custom': { name: '나만퀴(나만의 퀴즈 만들기)', image: 'question.png' }
             };
 
-            // 카테고리가 유효할 때만 아래 로직을 실행
             if (category && categoryData[category]) {
                 const categoryInfo = categoryData[category];
-                categoryTitle.textContent = `${categoryInfo.name} 퀴즈`;
+                categoryTitleEl.textContent = `${categoryInfo.name} 퀴즈`;
                 categoryImage.src = `/static/images/${categoryInfo.image}`;
                 categoryImage.alt = `${categoryInfo.name} 카테고리 이미지`;
 
-                // '나만퀴'일 경우 UI를 동적으로 변경
                 if (category === 'custom') {
-                    categoryTitle.textContent = '나만의 퀴즈 만들기';
+                    categoryTitleEl.textContent = '나만의 퀴즈 만들기';
                     categoryDescription.textContent = '원하는 퀴즈의 주제를 직접 입력하고 생성해보세요!';
                     customQuizInputContainer.classList.remove('hidden');
                 }
 
-                // 진행중인 게임 확인
-                checkExistingProgress();
+                checkExistingProgress(categoryInfo.name);
             }
 
-            let currentProgress = null;
+            // [수정] 진행중인 게임 확인 함수
+            async function checkExistingProgress(categoryName) {
+                for (const difficulty of ['easy', 'hard']) {
+                    try {
+                        const response = await fetch(`/api/get-progress?difficulty=${difficulty}&category=${encodeURIComponent(categoryName)}`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        const data = await response.json();
 
-            // 진행중인 게임 확인 함수
-            async function checkExistingProgress() {
-                try {
-                    const easyResponse = await fetch(`/api/get-progress?difficulty=easy&category=${encodeURIComponent(category)}`, {
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    });
-                    const hardResponse = await fetch(`/api/get-progress?difficulty=hard&category=${encodeURIComponent(category)}`, {
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    });
-
-                    const easyData = await easyResponse.json();
-                    const hardData = await hardResponse.json();
-
-                    if (easyData.hasProgress || hardData.hasProgress) {
-                        const progress = easyData.hasProgress ? { ...easyData, difficulty: 'easy' } : { ...hardData, difficulty: 'hard' };
-                        currentProgress = progress;
-
-                        const difficultyText = progress.difficulty === 'easy' ? 'Easy' : 'Hard';
-                        const updateTime = new Date(progress.updatedAt).toLocaleString('ko-KR');
-
-                        progressInfo.textContent = `${difficultyText} 모드 - ${progress.currentQuestion}번째 문제 (점수: ${progress.score}점) - 최근 업데이트: ${updateTime}`;
-                        progressAlert.classList.remove('hidden');
-                    }
-                } catch (error) {
-                    console.error('진행 상황 확인 실패:', error);
-                }
-            }
-
-            // 전역 함수로 게임 재개 기능 구현
-            window.resumeGame = function() {
-                if (currentProgress) {
-                    let gameUrl = `/game?difficulty=${currentProgress.difficulty}&category=${encodeURIComponent(category)}&resume=true`;
-
-                    // '나만퀴'인 경우, 저장된 키워드를 URL에 추가합니다.
-                    if (category === 'custom') {
-                        // 저장된 진행 상황(currentProgress)에서 키워드를 가져옵니다.
-                        const keyword = currentProgress.keyword;
-                        if (keyword) {
-                            gameUrl += `&keyword=${encodeURIComponent(keyword)}`;
-                        } else {
-                            // 안전장치: 키워드가 없는 경우
-                            alert('저장된 게임의 키워드를 찾을 수 없습니다. 새로 시작해주세요.');
-                            return;
+                        if (data.hasProgress && data.quizSets && data.quizSets.length > 0) {
+                            currentProgress = { ...data, difficulty, category: categoryName };
+                            const difficultyText = difficulty === 'easy' ? 'Easy' : 'Hard';
+                            progressInfo.textContent = `${difficultyText} 모드 - ${data.currentQuestion}번째 문제 진행 중 (점수: ${data.score}점)`;
+                            progressAlert.classList.remove('hidden');
+                            break;
                         }
+                    } catch (error) {
+                        console.error(`${difficulty} 모드 진행 상황 확인 실패:`, error);
                     }
-
-                    window.location.href = gameUrl;
                 }
-            };
+            }
+
+            // "새로 시작" 버튼 클릭 시, 이전 진행 기록 삭제 요청 추가
+            async function startGame(difficulty) {
+                if (progressAlert.classList.contains('hidden') || confirm('새로운 게임을 시작하시겠습니까? 진행중인 게임 기록이 있다면 삭제됩니다.')) {
+                    try {
+                        await fetch('/api/delete-progress', {
+                            method: 'DELETE',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify({
+                                difficulty: difficulty,
+                                category: categoryData[category].name
+                            })
+                        });
+
+                        let gameUrl = `/game?difficulty=${difficulty}&category=${encodeURIComponent(categoryData[category].name)}`;
+
+                        if (category === 'custom') {
+                            const keyword = document.getElementById('customKeywordInput').value.trim();
+                            if (!keyword) {
+                                alert('퀴즈를 만들 키워드를 입력해주세요!');
+                                return;
+                            }
+                            gameUrl += `&keyword=${encodeURIComponent(keyword)}`;
+                        }
+                        window.location.href = gameUrl;
+
+                    } catch(error) {
+                        console.error('기존 기록 삭제 또는 게임 시작 실패:', error);
+                        alert('게임 시작에 실패했습니다. 다시 시도해주세요.');
+                    }
+                }
+            }
 
             const easyModeBtn = document.getElementById('easyModeBtn');
             const hardModeBtn = document.getElementById('hardModeBtn');
-
-            function startGame(difficulty) {
-                let gameUrl = `/game?difficulty=${difficulty}&category=${encodeURIComponent(category)}`;
-
-                if (category === 'custom') {
-                    const keywordInput = document.getElementById('customKeywordInput');
-                    const keyword = keywordInput.value.trim();
-
-                    if (!keyword) {
-                        alert('퀴즈를 만들 키워드를 입력해주세요!');
-                        keywordInput.focus();
-                        return;
-                    }
-                    gameUrl += `&keyword=${encodeURIComponent(keyword)}`;
-                }
-
-                window.location.href = gameUrl;
-            }
 
             easyModeBtn.addEventListener('click', () => startGame('easy'));
             hardModeBtn.addEventListener('click', () => startGame('hard'));
@@ -323,3 +330,4 @@
     </script>
 </body>
 </html>
+

@@ -11,3 +11,8 @@ class Config:
     # 2. MONGO_URI를 클래스 내부에 한 번만 명확하게 정의
     #    (실제 발급받은 URI로 이 부분을 교체하세요)
     MONGO_URI = os.environ.get('MONGO_URI') or "mongodb+srv://jungle01_db_user:7YY5MfgNU92HivHA@aiornot.gfhjper.mongodb.net/AIorNot?retryWrites=true&w=majority"
+
+    aws_access_key = os.environ.get("AWS_ACCESS_KEY")
+    aws_secret_key = os.environ.get("AWS_SECRET_KEY")
+    bucket_name = os.environ.get("AWS_S3_BUCKET_NAME")
+    region_name = os.environ.get("AWS_S3_REGION")

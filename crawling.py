@@ -12,9 +12,22 @@ import uuid
 import time
 import dotenv
 
+import boto3
+from config import Config
+
 dotenv.load_dotenv()
 DEFAULT_MODEL = "gemini-2.5-flash-image-preview"
 
+# S3 클라이언트 초기화 (config.py 값 사용)
+# 프로그램 시작 시 한 번만 생성하여 재사용합니다.
+s3_client = boto3.client(
+    's3',
+    aws_access_key_id=Config.aws_access_key,
+    aws_secret_access_key=Config.aws_secret_key,
+    region_name=Config.region_name
+)
+S3_BUCKET_NAME = Config.bucket_name
+S3_BASE_PATH = "generated"
 
 def _slugify(text: str) -> str:
     """파일명에 안전하도록 간단 슬러그화."""
@@ -24,20 +37,13 @@ def _slugify(text: str) -> str:
     text = re.sub(r"^-+|-+$", "", text)
     return text[:60] if text else "image"
 
-
-def _ensure_dir(path: Union[str, Path]) -> Path:  # ← 변경
-    p = Path(path)
-    p.mkdir(parents=True, exist_ok=True)
-    return p
-
-
 def generate_image_once(
     prompt: str,
-    out_dir: Union[str, Path],          # ← 변경
+    category: str,        # ← 변경
     model: str = DEFAULT_MODEL,
     api_key: Optional[str] = None,
     filename_prefix: Optional[str] = None,
-) -> List[Path]:
+) -> List[str]:
     """
     단일 요청으로 생성된 '모든 이미지 파트'를 저장하고 경로 리스트 반환.
     - prompt: 이미지 생성 프롬프트
@@ -58,16 +64,15 @@ def generate_image_once(
         contents=[prompt],
     )
 
-    out_dir = _ensure_dir(out_dir)
     base = filename_prefix or _slugify(prompt)
     ts = int(time.time())
-    saved_paths: List[Path] = []
+    saved_s3_paths: List[str] = [] # S3 경로를 저장할 리스트
 
     # 후보(candidate) 내 content.parts 에 이미지 파트가 들어있음
     # 텍스트 파트가 섞일 수 있어 분기 처리
     candidate = response.candidates[0] if response.candidates else None
     if not candidate or not getattr(candidate, "content", None):
-        return saved_paths  # 이미지가 없을 수 있음
+        return saved_s3_paths
 
     idx_in_parts = 0
     for part in candidate.content.parts:
@@ -81,28 +86,38 @@ def generate_image_once(
                 img = Image.open(BytesIO(inline.data))
                 unique = uuid.uuid4().hex[:8]
                 fname = f"{base}-{ts}-{unique}-{idx_in_parts}.png"
-                fpath = out_dir / fname
-                img.save(fpath)
-                saved_paths.append(fpath)
-                idx_in_parts += 1
+
+                # S3 전체 경로(객체 키) 설정
+                s3_object_name = f"{S3_BASE_PATH}/{category}/{fname}"
+
+                # 이미지를 파일이 아닌 '메모리 버퍼'에 저장
+                in_mem_file = BytesIO()
+                img.save(in_mem_file, format='PNG')
+                in_mem_file.seek(0)  # 버퍼의 포인터를 맨 앞으로 이동
+
+                # 메모리에 있는 이미지 데이터를 S3로 직접 업로드
+                s3_client.upload_fileobj(in_mem_file, S3_BUCKET_NAME, s3_object_name)
+
+                saved_s3_paths.append(s3_object_name)
+                # print(f"✅ S3 Upload OK: {s3_object_name}") # 확인이 필요하면 주석 해제
             except Exception as e:
                 print(f"[warn] 이미지 저장 실패: {e}")
 
-    return saved_paths
+    return saved_s3_paths
 
 
 def _worker_task(
     prompt: str,
-    out_dir: Union[str, Path],  # ← 변경
+    category: str,  # ← 변경
     model: str,
     api_key: Optional[str],
     filename_prefix: Optional[str],
-) -> Tuple[str, List[Path]]:
+) -> Tuple[str, List[str]]:
     """스레드 워커: 프롬프트 1건 생성-저장."""
     try:
         paths = generate_image_once(
             prompt=prompt,
-            out_dir=out_dir,
+            category=category,
             model=model,
             api_key=api_key,
             filename_prefix=filename_prefix,
@@ -115,16 +130,16 @@ def _worker_task(
 
 def generate_images_concurrent(
     prompts: List[str],
-    out_dir: Union[str, Path],          # ← 변경
+    category: str, # 'category' 파라미터 추가
     *,
     repeat_per_prompt: int = 1,
     max_workers: int = 4,
     model: str = DEFAULT_MODEL,
     api_key: Optional[str] = None,
     filename_prefix: Optional[str] = None,
-) -> Dict[str, List[Path]]:
+) -> Dict[str, List[str]]: # 반환 타입을 S3 경로 리스트로 변경
     """
-    여러 프롬프트를 동시 병렬로 요청하여 이미지 저장.
+    여러 프롬프트를 동시 병렬로 요청하여 이미지를 S3에 업로드.
     - prompts: 프롬프트 목록
     - out_dir: 저장 폴더
     - repeat_per_prompt: 각 프롬프트를 몇 번 반복 호출할지(다양한 샘플 원할 때 >1)
@@ -132,12 +147,11 @@ def generate_images_concurrent(
     - model, api_key, filename_prefix: 옵션
     반환: {prompt: [Path, ...]} 매핑
     """
-    out_dir = _ensure_dir(out_dir)
     api_key = api_key or os.getenv("GOOGLE_API_KEY")
     if not api_key:
         raise RuntimeError("GOOGLE_API_KEY 환경변수가 설정되어 있지 않습니다.")
 
-    results: Dict[str, List[Path]] = {p: [] for p in prompts}
+    results: Dict[str, List[str]] = {p: [] for p in prompts}
 
     tasks: List[Tuple[str, Any]] = []
     with ThreadPoolExecutor(max_workers=max_workers) as ex:
@@ -146,7 +160,7 @@ def generate_images_concurrent(
                 fut = ex.submit(
                     _worker_task,
                     prompt,
-                    out_dir,
+                    category,
                     model,
                     api_key,
                     filename_prefix,
@@ -156,7 +170,7 @@ def generate_images_concurrent(
         for prompt, fut in tasks:
             p, paths = fut.result()
             results[p].extend(paths)
-            print(f"[done] '{p}' -> {len(paths)}장 저장")
+            print(f"[done] '{p[:30]}...' -> {len(paths)}장 S3 업로드")
 
     return results
 
@@ -205,14 +219,14 @@ if __name__ == "__main__":
         "Photorealistic stainless bowl reflection with assorted fruits on a counter, 24mm, f/3.5, ISO 800, 1/60s, cool kitchen light, subtle reflections, no text or watermark."
     ]
 }
-    base_out_dir = "static/generated"
+    # base_out_dir = "static/generated"
 
     all_results = {}
     for category, prompts in categories.items():
-        out_dir = os.path.join(base_out_dir, category)
+        # generate_images_concurrent 함수가 이제 'out_dir' 대신 'category'를 받습니다.
         results = generate_images_concurrent(
             prompts=prompts,
-            out_dir=out_dir,
+            category=category,
             repeat_per_prompt=1,
             max_workers=10,
             model=DEFAULT_MODEL,
@@ -220,9 +234,11 @@ if __name__ == "__main__":
         )
         all_results[category] = results
 
-    total = sum(len(v) for v in results.values())
-    print(f"\n총 {total}장 저장됨.")
-    for p, paths in results.items():
-        print(f"- {p} :")
-        for path in paths:
-            print(f"    {path}")
+    total_count = sum(len(paths) for res in all_results.values() for paths in res.values())
+    print(f"\n--- 작업 완료: 총 {total_count}개의 이미지를 S3에 업로드했습니다. ---")
+    for category, res in all_results.items():
+        print(f"\n## 카테고리: {category}")
+        for prompt, s3_paths in res.items():
+            if s3_paths:
+                # 생성된 S3 경로 중 첫 번째 것만 샘플로 출력
+                print(f"  - s3://{S3_BUCKET_NAME}/{s3_paths[0]}")
