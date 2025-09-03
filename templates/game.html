@@ -1,11 +1,39 @@
 <!DOCTYPE html>
 <html lang="ko">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Quiz 게임</title>
-    <link href="{{ url_for('static', filename='css/main.css') }}" rel="stylesheet">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 로딩 오버레이 */
+        #loadingOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .bouncing-balls {
+            width: 150px;
+            height: 150px;
+        }
+
+        .ball {
+            fill: #4a6cf7;
+        }
+
+        .red { fill: #ff6b6b; }
+        .blue { fill: #4a6cf7; }
+        .green { fill: #6bff6b; }
+    </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
     <div class="container mx-auto px-4 py-8 max-w-8xl mt-12">
@@ -26,13 +54,13 @@
                                 </svg>
                             </div>
                             <div>
-                                <h3 class="font-semibold text-gray-800">사용자</h3>
-                                <p class="text-sm text-gray-500">user@example.com</p>
+                                <h3 id="popupUsername" class="font-semibold text-gray-800">사용자</h3>
+                                <p id="popupEmail" class="text-sm text-gray-500">정보를 불러오는 중...</p>
                             </div>
                         </div>
                     </div>
                     <div class="py-2">
-                        <a href="#" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors duration-150">
+                        <a href="#" id="logoutButton" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors duration-150">
                             <div class="flex items-center space-x-2">
                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -91,7 +119,7 @@
 
         <div class="relative">
             <div id="imageGrid" class="grid gap-6 mb-8">
-                </div>
+            </div>
         </div>
 
         <div class="flex justify-center space-x-4 mb-8">
@@ -108,8 +136,27 @@
         </div>
     </div>
 
+    <!-- 로딩 오버레이 -->
+    <div id="loadingOverlay">
+        <svg viewBox="0 0 200 100" class="bouncing-balls">
+            <circle class="ball red" cx="30" cy="30" r="10"/>
+            <circle class="ball blue" cx="70" cy="30" r="10"/>
+            <circle class="ball green" cx="110" cy="30" r="10"/>
+        </svg>
+        <p class="text-gray-600 text-lg mt-4">문제 생성 중...</p>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <script>
     document.addEventListener('DOMContentLoaded', async function() {
+        // --- 로그인 상태 확인 ---
+        const token = localStorage.getItem('accessToken');
+        if (!token) {
+            alert('로그인이 필요합니다.');
+            window.location.href = '/welcome';
+            return;
+        }
+
         // --- 기본 설정 및 상태 관리 ---
         const urlParams = new URLSearchParams(window.location.search);
         const difficulty = urlParams.get('difficulty') || 'easy';
@@ -136,21 +183,73 @@
             currentScore: document.getElementById('currentScore'),
             currentCategory: document.getElementById('currentCategory'),
             userButton: document.getElementById('userButton'),
-            userPopup: document.getElementById('userPopup')
+            userPopup: document.getElementById('userPopup'),
+            loadingOverlay: document.getElementById('loadingOverlay'),
+            popupUsername: document.getElementById('popupUsername'),
+            popupEmail: document.getElementById('popupEmail'),
+            logoutButton: document.getElementById('logoutButton')
         };
+
+        // --- 로딩 애니메이션 ---
+        const balls = gsap.utils.toArray(".ball");
+        balls.forEach((ball, i) => {
+            gsap.to(ball, {
+                y: 60,
+                duration: 0.6,
+                yoyo: true,
+                repeat: -1,
+                ease: "sine.inOut",
+                delay: i * 0.2
+            });
+        });
+
+        function toggleLoading(show) {
+            if (show) {
+                elements.loadingOverlay.style.display = 'flex';
+            } else {
+                elements.loadingOverlay.style.display = 'none';
+            }
+        }
 
         // --- API 호출 ---
         async function fetchQuizData() {
             try {
+                toggleLoading(true); // 로딩 시작
                 const response = await fetch(`/api/get-quiz-images?category=${encodeURIComponent(category)}&count=${gameState.imageCount}`);
                 if (!response.ok) {
                     const errorData = await response.json();
                     throw new Error(errorData.message || '퀴즈 데이터를 불러오는 데 실패했습니다.');
                 }
-                return await response.json();
+                const quizData = await response.json();
+                toggleLoading(false); // 로딩 끝
+                return quizData;
             } catch (error) {
+                toggleLoading(false); // 로딩 끝
+                // 사용자에게 alert 대신 커스텀 모달 UI를 사용해야 하지만, 여기서는 임시로 alert를 사용합니다.
                 alert(error.message);
                 window.location.href = '/category'; // 오류 발생 시 카테고리 페이지로 이동
+            }
+        }
+
+        async function fetchUserInfo() {
+            try {
+                const response = await fetch('/auth/verify-token', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    elements.popupUsername.textContent = data.username;
+                    elements.popupEmail.textContent = '로그인 됨';
+                } else {
+                    throw new Error('인증 실패');
+                }
+            } catch (error) {
+                console.error('사용자 정보 로딩 실패:', error);
+                localStorage.removeItem('accessToken');
+                localStorage.removeItem('username');
+                alert('세션이 만료되었거나 유효하지 않습니다. 다시 로그인해주세요.');
+                window.location.href = '/welcome';
             }
         }
 
@@ -235,15 +334,50 @@
         // --- 초기화 및 이벤트 리스너 ---
         function setupEventListeners() {
             elements.skipBtn.addEventListener('click', () => {
+                // 사용자에게 confirm() 대신 커스텀 모달 UI를 사용해야 하지만, 여기서는 임시로 confirm()을 사용합니다.
                 if (confirm('이 문제를 건너뛰시겠습니까?')) nextQuestion();
             });
             elements.nextBtn.addEventListener('click', nextQuestion);
-            // (사용자 팝업 등 다른 이벤트 리스너는 여기에 추가)
+
+            // 사용자 팝업을 위한 이벤트 리스너
+            elements.userButton.addEventListener('click', (e) => {
+                e.stopPropagation();
+                elements.userPopup.classList.toggle('hidden');
+            });
+
+            // 팝업 외부를 클릭하면 팝업 닫기
+            document.body.addEventListener('click', (e) => {
+                if (!elements.userPopup.contains(e.target) && !elements.userButton.contains(e.target)) {
+                    elements.userPopup.classList.add('hidden');
+                }
+            });
+
+            elements.logoutButton.addEventListener('click', async function(e) {
+                e.preventDefault();
+                try {
+                    const response = await fetch('/auth/logout', {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+
+                    if (response.ok) {
+                        alert('로그아웃되었습니다.');
+                    }
+                } catch (error) {
+                    console.error('로그아웃 요청 실패:', error);
+                } finally {
+                    localStorage.removeItem('accessToken');
+                    localStorage.removeItem('username');
+                    window.location.href = '/welcome';
+                }
+            });
         }
 
         async function initGame() {
             elements.currentCategory.textContent = category;
             elements.difficultyDisplay.textContent = gameState.difficulty === 'hard' ? 'Hard (6개)' : 'Easy (2개)';
+
+            await fetchUserInfo(); // 사용자 정보 로딩
             setupEventListeners();
 
             const quizData = await fetchQuizData();
