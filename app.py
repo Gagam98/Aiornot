@@ -12,8 +12,12 @@ from datetime import datetime
 from ranking import get_ranking_data
 from crawling import generate_images_concurrent
 
-# --- 설정 부분 ---
-PIXABAY_API_KEY = "52091010-849e60920cd3cadb857a7d1d3"
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+PIXABAY_API_KEY = os.getenv("PIXABAY_API_KEY")
+
 # 개선된 카테고리 매핑 시스템
 CATEGORY_CONFIG = {
     "cat": {
