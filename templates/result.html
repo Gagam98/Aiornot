@@ -12,93 +12,53 @@
         <div class="relative mb-8">
             <div class="absolute top-0 right-0">
                 <button id="userButton" class="p-2 rounded-full bg-white shadow-lg hover:shadow-xl transition-all duration-200 hover:bg-gray-50">
-                    <svg class="w-8 h-8 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
+                    <svg class="w-8 h-8 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                 </button>
-
                 <div id="userPopup" class="hidden absolute top-12 right-0 w-64 bg-white rounded-lg shadow-xl border border-gray-200 z-50">
-                    <div class="p-4 border-b border-gray-100">
-                        <div class="flex items-center space-x-3">
-                            <div class="w-12 h-12 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center">
-                                <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                </svg>
-                            </div>
-                            <div>
-                                <h3 class="font-semibold text-gray-800">사용자</h3>
-                                <p class="text-sm text-gray-500">user@example.com</p>
-                            </div>
-                        </div>
                     </div>
-                    <div class="py-2">
-                        <a href="#" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors duration-150">
-                            <div class="flex items-center space-x-2">
-                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                                </svg>
-                                <span>로그아웃</span>
-                            </div>
-                        </a>
-                    </div>
-                </div>
             </div>
-
             <div class="absolute top-0 left-0">
-                <button id="homeBtn" class="p-2 rounded-full bg-white shadow-lg hover:shadow-xl transition-all duration-200 hover:bg-gray-50" onclick="window.location.href='/category'">
-                    <svg class="w-8 h-8 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                    </svg>
+                 <button id="homeBtn" class="p-2 rounded-full bg-white shadow-lg hover:shadow-xl transition-all duration-200 hover:bg-gray-50" onclick="window.location.href='/category'">
+                    <svg class="w-8 h-8 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
                 </button>
             </div>
-
             <div class="text-center">
                 <h1 class="text-4xl font-bold text-gray-800 mb-2">게임 결과</h1>
                 <p class="text-xl text-gray-600">당신의 점수와 순위를 확인해보세요!</p>
             </div>
         </div>
 
-        <div class="mb-12">
+        <div id="rankingPodium" class="mb-12" style="visibility: hidden;">
             <div class="flex justify-center items-end space-x-8">
-                <div class="flex flex-col items-center">
+                <div id="podium-2" class="flex flex-col items-center">
                     <div class="w-20 h-20 bg-gradient-to-br from-gray-300 to-gray-500 rounded-full flex items-center justify-center mb-4 shadow-lg">
-                        <svg class="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                        </svg>
+                        <svg class="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
                     </div>
                     <div class="bg-gray-400 text-white px-6 py-8 rounded-t-lg text-center min-w-32">
                         <div class="text-2xl font-bold">2등</div>
-                        <div class="text-sm mt-2">김철수</div>
-                        <div class="text-lg font-semibold mt-1">85점</div>
+                        <div id="rank-2-name" class="text-sm mt-2">--</div>
+                        <div id="rank-2-score" class="text-lg font-semibold mt-1">--</div>
                     </div>
                 </div>
-
-                <div class="flex flex-col items-center">
+                <div id="podium-1" class="flex flex-col items-center">
                     <div class="w-24 h-24 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center mb-4 shadow-xl animate-pulse">
-                        <svg class="w-12 h-12 text-white" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                        </svg>
+                         <svg class="w-12 h-12 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
                     </div>
                     <div class="bg-yellow-500 text-white px-6 py-12 rounded-t-lg text-center min-w-36 relative">
-                        <div class="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                            <div class="bg-yellow-400 text-yellow-800 px-3 py-1 rounded-full text-xs font-bold">👑 WINNER</div>
-                        </div>
+                        <div class="absolute -top-3 left-1/2 transform -translate-x-1/2"><div class="bg-yellow-400 text-yellow-800 px-3 py-1 rounded-full text-xs font-bold">👑 WINNER</div></div>
                         <div class="text-3xl font-bold">1등</div>
-                        <div class="text-sm mt-2">박영희</div>
-                        <div class="text-xl font-semibold mt-1">95점</div>
+                        <div id="rank-1-name" class="text-sm mt-2">--</div>
+                        <div id="rank-1-score" class="text-xl font-semibold mt-1">--</div>
                     </div>
                 </div>
-
-                <div class="flex flex-col items-center">
-                    <div class="w-18 h-18 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full flex items-center justify-center mb-4 shadow-lg">
-                        <svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                        </svg>
+                <div id="podium-3" class="flex flex-col items-center">
+                     <div class="w-18 h-18 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full flex items-center justify-center mb-4 shadow-lg">
+                        <svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
                     </div>
                     <div class="bg-orange-500 text-white px-6 py-6 rounded-t-lg text-center min-w-28">
                         <div class="text-xl font-bold">3등</div>
-                        <div class="text-sm mt-2">이민수</div>
-                        <div class="text-lg font-semibold mt-1">75점</div>
+                        <div id="rank-3-name" class="text-sm mt-2">--</div>
+                        <div id="rank-3-score" class="text-lg font-semibold mt-1">--</div>
                     </div>
                 </div>
             </div>
@@ -108,34 +68,28 @@
             <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-2xl w-full">
                 <div class="text-center">
                     <div class="w-32 h-32 mx-auto bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mb-6">
-                        <svg class="w-16 h-16 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
+                        <svg class="w-16 h-16 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                     </div>
-
                     <h2 class="text-3xl font-bold text-gray-800 mb-4">당신의 점수</h2>
-
                     <div class="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 mb-6">
-                        <div class="text-6xl font-bold text-blue-600 mb-2" id="userScore">80</div>
+                        <div class="text-6xl font-bold text-blue-600 mb-2" id="userScore">0</div>
                         <div class="text-xl text-gray-600 mb-4">점</div>
                         <div class="text-lg text-gray-700 mb-2">
-                            <span class="font-semibold" id="correctAnswers">8</span> / <span id="totalQuestions">10</span> 정답
+                            <span class="font-semibold" id="correctAnswers">0</span> / <span id="totalQuestions">10</span> 정답
                         </div>
-                        <div class="text-sm text-gray-500">정답률: <span class="font-semibold text-blue-600" id="accuracy">80%</span></div>
+                        <div class="text-sm text-gray-500">정답률: <span class="font-semibold text-blue-600" id="accuracy">0%</span></div>
                     </div>
-
                     <div class="bg-gray-50 rounded-xl p-4 mb-6">
                         <div class="text-lg font-semibold text-gray-800 mb-2">전체 순위</div>
-                        <div class="text-3xl font-bold text-orange-600" id="userRank">4위</div>
-                        <div class="text-sm text-gray-500 mt-1">상위 <span class="font-semibold" id="percentage">20%</span></div>
+                        <div class="text-3xl font-bold text-orange-600" id="userRank">계산 중...</div>
+                        <div class="text-sm text-gray-500 mt-1">상위 <span class="font-semibold" id="percentage">--%</span></div>
                     </div>
-
                     <div class="flex justify-center space-x-4 text-sm text-gray-600">
                         <div class="bg-white px-3 py-1 rounded-full shadow">
-                            <span class="font-semibold">난이도:</span> <span id="difficulty">Easy</span>
+                            <span class="font-semibold">난이도:</span> <span id="difficulty">--</span>
                         </div>
                         <div class="bg-white px-3 py-1 rounded-full shadow">
-                            <span class="font-semibold">카테고리:</span> <span id="category">고양이</span>
+                            <span class="font-semibold">카테고리:</span> <span id="category">--</span>
                         </div>
                     </div>
                 </div>
@@ -146,25 +100,14 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl w-full">
                 <button id="playAgainBtn" class="group bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-xl">
                     <div class="flex items-center justify-center">
-                        <svg class="w-8 h-8 mr-3 group-hover:animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                        <div>
-                            <div class="text-xl font-bold">다시하기</div>
-                            <div class="text-green-100 text-sm">같은 난이도로 재도전</div>
-                        </div>
+                        <svg class="w-8 h-8 mr-3 group-hover:animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                        <div><div class="text-xl font-bold">다시하기</div><div class="text-green-100 text-sm">같은 난이도로 재도전</div></div>
                     </div>
                 </button>
-
                 <button id="homeButton" class="group bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-xl">
                     <div class="flex items-center justify-center">
-                        <svg class="w-8 h-8 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                        </svg>
-                        <div>
-                            <div class="text-xl font-bold">홈으로</div>
-                            <div class="text-blue-100 text-sm">카테고리 선택으로</div>
-                        </div>
+                        <svg class="w-8 h-8 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
+                        <div><div class="text-xl font-bold">홈으로</div><div class="text-blue-100 text-sm">카테고리 선택으로</div></div>
                     </div>
                 </button>
             </div>
@@ -172,125 +115,140 @@
     </div>
 
     <script>
-        // 사용자 팝업 기능
-        const userButton = document.getElementById('userButton');
-        const userPopup = document.getElementById('userPopup');
-
-        userButton.addEventListener('click', function(e) {
-            e.stopPropagation();
-            userPopup.classList.toggle('hidden');
-        });
-
-        document.addEventListener('click', function(e) {
-            if (!userPopup.contains(e.target) && !userButton.contains(e.target)) {
-                userPopup.classList.add('hidden');
-            }
-        });
-
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                userPopup.classList.add('hidden');
-            }
-        });
-
-        // URL 파라미터에서 게임 결과 정보 가져오기
+        // --- 유틸리티 함수 ---
         function getGameResultFromURL() {
             const urlParams = new URLSearchParams(window.location.search);
             return {
-                score: urlParams.get('score') || '80',
-                correctAnswers: urlParams.get('correct') || '8',
-                totalQuestions: urlParams.get('total') || '10',
+                score: parseInt(urlParams.get('score') || '0'),
+                correctAnswers: parseInt(urlParams.get('correct') || '0'),
+                totalQuestions: parseInt(urlParams.get('total') || '10'),
                 difficulty: urlParams.get('difficulty') || 'easy',
-                category: urlParams.get('category') || '고양이'
+                category: urlParams.get('category') || '알 수 없음'
             };
         }
 
-        // 게임 결과 표시
-        function displayGameResult() {
-            const result = getGameResultFromURL();
-
+        // --- UI 업데이트 함수 ---
+        function displayGameResult(result) {
             document.getElementById('userScore').textContent = result.score;
             document.getElementById('correctAnswers').textContent = result.correctAnswers;
             document.getElementById('totalQuestions').textContent = result.totalQuestions;
 
-            const accuracy = Math.round((result.correctAnswers / result.totalQuestions) * 100);
+            const accuracy = result.totalQuestions > 0 ? Math.round((result.correctAnswers / result.totalQuestions) * 100) : 0;
             document.getElementById('accuracy').textContent = accuracy + '%';
 
             const difficultyText = result.difficulty.charAt(0).toUpperCase() + result.difficulty.slice(1);
             document.getElementById('difficulty').textContent = difficultyText;
             document.getElementById('category').textContent = result.category;
-
-            const score = parseInt(result.score);
-            let rank, percentage;
-
-            if (score >= 90) {
-                rank = '1위';
-                percentage = '5%';
-            } else if (score >= 80) {
-                rank = '4위';
-                percentage = '20%';
-            } else if (score >= 70) {
-                rank = '8위';
-                percentage = '40%';
-            } else {
-                rank = '15위';
-                percentage = '70%';
-            }
-
-            document.getElementById('userRank').textContent = rank;
-            document.getElementById('percentage').textContent = percentage;
         }
 
-        // 서버에 점수 저장하는 함수
-        async function saveScoreToServer() {
-            const result = getGameResultFromURL();
-            const token = localStorage.getItem('accessToken');
+        function updateRankingUI(rankingData) {
+            // 1. 내 순위 정보 업데이트
+            const userRank = rankingData.user_rank;
+            const totalRankedUsers = rankingData.total_ranked_users;
 
-            if (!token) {
-                console.error('로그인 토큰이 없습니다.');
-                return;
+            if (userRank > 0) {
+                document.getElementById('userRank').textContent = `${userRank}위`;
+                const percentage = totalRankedUsers > 0 ? Math.round((userRank / totalRankedUsers) * 100) : 0;
+                document.getElementById('percentage').textContent = `${percentage}%`;
+            } else {
+                document.getElementById('userRank').textContent = '순위 없음';
+                document.getElementById('percentage').textContent = '-';
             }
 
+            // 2. 상위 3명 랭킹 포디움 업데이트
+            const top3 = rankingData.top_3_ranking;
+
+            const podiums = [
+                { nameEl: document.getElementById('rank-1-name'), scoreEl: document.getElementById('rank-1-score') },
+                { nameEl: document.getElementById('rank-2-name'), scoreEl: document.getElementById('rank-2-score') },
+                { nameEl: document.getElementById('rank-3-name'), scoreEl: document.getElementById('rank-3-score') }
+            ];
+
+            // ### 변경된 로직 ###
+            // 이제 포디움을 항상 보여주되, 랭커 정보가 있으면 채우고 없으면 '-'로 표시합니다.
+            podiums.forEach((podium, index) => {
+                if (top3[index]) {
+                    // 랭커 정보가 있는 경우
+                    podium.nameEl.textContent = top3[index].username;
+                    podium.scoreEl.textContent = `${top3[index].score}점`;
+                } else {
+                    // 랭커 정보가 없는 경우
+                    podium.nameEl.textContent = '-';
+                    podium.scoreEl.textContent = '-';
+                }
+            });
+
+            document.getElementById('rankingPodium').style.visibility = 'visible';
+        }
+
+        // --- API 호출 함수 ---
+        async function saveScoreToServer(result) {
+            const token = localStorage.getItem('accessToken');
+            if (!token) return;
+
             try {
-                const response = await fetch('/api/save-score', {
+                await fetch('/api/save-score', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
                     },
                     body: JSON.stringify({
-                        score: parseInt(result.score),
-                        difficulty: result.difficulty
+                        score: result.score,
+                        difficulty: result.difficulty,
+                        category: result.category
                     })
                 });
-
-                const data = await response.json();
-                if (response.ok) {
-                    console.log('점수 저장 성공:', data.message);
-                } else {
-                    console.error('점수 저장 실패:', data.message);
-                }
             } catch (error) {
                 console.error('점수 저장 API 호출 중 오류 발생:', error);
             }
         }
 
-        // 버튼 이벤트 리스너
-        document.getElementById('playAgainBtn').addEventListener('click', function() {
-            const result = getGameResultFromURL();
-            window.location.href = `/game?difficulty=${result.difficulty}&category=${encodeURIComponent(result.category)}`;
-        });
+        async function fetchAndDisplayRanking(result) {
+            const token = localStorage.getItem('accessToken');
+            if (!token) {
+                document.getElementById('userRank').textContent = '로그인 필요';
+                // 로그인 안했을 때도 포디움은 보여주되, 내용은 '-'로 채움
+                updateRankingUI({ user_rank: -1, top_3_ranking: [], total_ranked_users: 0 });
+                return;
+            }
 
+            try {
+                const response = await fetch(`/api/ranking?difficulty=${result.difficulty}&category=${encodeURIComponent(result.category)}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
 
+                if (response.ok) {
+                    const rankingData = await response.json();
+                    updateRankingUI(rankingData);
+                } else {
+                    document.getElementById('userRank').textContent = '랭킹 로딩 실패';
+                    updateRankingUI({ user_rank: -1, top_3_ranking: [], total_ranked_users: 0 });
+                }
+            } catch (error) {
+                document.getElementById('userRank').textContent = '오류 발생';
+                updateRankingUI({ user_rank: -1, top_3_ranking: [], total_ranked_users: 0 });
+            }
+        }
 
-        document.getElementById('homeButton').addEventListener('click', function() {
-            window.location.href = '/category';
-        });
+        // --- 이벤트 리스너 설정 ---
+        function setupEventListeners(result) {
+            document.getElementById('playAgainBtn').addEventListener('click', () => {
+                window.location.href = `/game?difficulty=${result.difficulty}&category=${encodeURIComponent(result.category)}`;
+            });
 
-        // 페이지 로드 시 결과 표시 및 점수 저장
-        document.addEventListener('DOMContentLoaded', function() {
-            displayGameResult();
-            saveScoreToServer();
+            document.getElementById('homeButton').addEventListener('click', () => {
+                window.location.href = '/category';
+            });
+        }
+
+        // --- 페이지 초기화 ---
+        document.addEventListener('DOMContentLoaded', async () => {
+            const gameResult = getGameResultFromURL();
+            displayGameResult(gameResult);
+            setupEventListeners(gameResult);
+            await saveScoreToServer(gameResult);
+            await fetchAndDisplayRanking(gameResult);
         });
     </script>
 </body>

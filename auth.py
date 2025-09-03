@@ -22,8 +22,6 @@ def on_load(state):
 def register():
     try:
         data = request.get_json()
-        # HTML의 id, email, pw 필드명을 받아 처리
-
         username = data.get('id', '').strip()
         email = data.get('email', '').strip()
         password = data.get('password', '')
@@ -38,12 +36,12 @@ def register():
         if mongo.db.users.find_one({"email": email}):
             return jsonify({'message': '이미 존재하는 이메일입니다'}), 400
 
+        # ### 변경된 부분 ###
+        # easy_score와 hard_score 필드를 제거했습니다.
         user_id = mongo.db.users.insert_one({
             'username': username,
             'email': email,
-            'password_hash': generate_password_hash(password),
-            'easy_score': 0,
-            'hard_score': 0
+            'password_hash': generate_password_hash(password)
         }).inserted_id
 
         return jsonify({'message': '회원가입이 완료되었습니다', 'user_id': str(user_id)}), 201
@@ -51,11 +49,11 @@ def register():
     except Exception as e:
         return jsonify({'message': f'서버 오류: {e}'}), 500
 
+# login, logout, verify_token 함수는 기존과 동일합니다.
 @auth_bp.route('/login', methods=['POST'])
 def login():
     try:
         data = request.get_json()
-        # HTML의 id 필드명을 받아 username으로 사용
         username = data.get('id', '').strip()
         password = data.get('password', '')
 
