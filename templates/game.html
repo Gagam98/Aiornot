@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Login</title>
+  <title>AI Quiz Game</title>
   <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* 로딩 오버레이 */
@@ -73,13 +73,12 @@
             </div>
 
             <div class="absolute top-0 left-0">
-                <button id="homeBtn" class="p-2 rounded-full bg-white shadow-lg hover:shadow-xl transition-all duration-200 hover:bg-gray-50" onclick="window.location.href='/category'">
+                <button id="homeBtn" class="p-2 rounded-full bg-white shadow-lg hover:shadow-xl transition-all duration-200 hover:bg-gray-50">
                     <svg class="w-8 h-8 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                     </svg>
                 </button>
             </div>
-
 
             <div class="text-center">
                 <h1 class="text-4xl font-bold text-gray-800 mb-2">AI or NOT</h1>
@@ -118,15 +117,14 @@
         </div>
 
         <div class="relative">
-            <!-- 로딩 화면 -->
             <div id="loadingScreen" class="text-center py-12">
                 <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
                 <h3 class="text-xl font-semibold text-gray-700 mb-2">AI 이미지 생성 중...</h3>
                 <p class="text-gray-500">잠시만 기다려주세요. 곧 게임이 시작됩니다!</p>
             </div>
-            
+
             <div id="imageGrid" class="hidden grid gap-6 mb-8">
-                </div>
+            </div>
         </div>
 
         <div class="flex justify-center space-x-4 mb-8">
@@ -143,7 +141,6 @@
         </div>
     </div>
 
-    <!-- 로딩 오버레이 -->
     <div id="loadingOverlay">
         <svg viewBox="0 0 200 100" class="bouncing-balls">
             <circle class="ball red" cx="30" cy="30" r="10"/>
@@ -169,6 +166,7 @@
         const difficulty = urlParams.get('difficulty') || 'easy';
         const category = urlParams.get('category') || '알 수 없음';
         const keyword = urlParams.get('keyword') || '';
+        const isResume = urlParams.get('resume') === 'true';
 
         const gameState = {
             currentQuestion: 1,
@@ -179,7 +177,9 @@
             difficulty: difficulty.toLowerCase(),
             imageCount: difficulty.toLowerCase() === 'hard' ? 6 : 2,
             quizSets: [],  // 미리 준비된 퀴즈 세트
-            isGameReady: false
+            isGameReady: false,
+            lastSavedQuestion: 0,  // 마지막으로 저장된 문제 번호
+            saveInProgress: false  // 저장 진행 중인지 확인
         };
 
         const elements = {
@@ -221,6 +221,68 @@
             }
         }
 
+        // --- 진행 상황 저장 함수 ---
+        async function saveGameProgress(isFinal = false) {
+            if (gameState.saveInProgress) return;
+
+            gameState.saveInProgress = true;
+            try {
+                const response = await fetch('/api/save-progress', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        currentQuestion: gameState.currentQuestion,
+                        score: gameState.score,
+                        difficulty: gameState.difficulty,
+                        category: category,
+                        keyword: keyword, // [수정] '나만퀴'의 키워드를 함께 전송합니다.
+                        isFinal: isFinal
+                    })
+                });
+
+                if (response.ok) {
+                    gameState.lastSavedQuestion = gameState.currentQuestion;
+                }
+            } catch (error) {
+                console.error('진행 상황 저장 실패:', error);
+            } finally {
+                gameState.saveInProgress = false;
+            }
+        }
+
+        // --- 기존 진행 상황 복원 ---
+        async function restoreProgress() {
+            if (!isResume) return false;
+
+            try {
+                const response = await fetch(`/api/get-progress?difficulty=${gameState.difficulty}&category=${encodeURIComponent(category)}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.hasProgress) {
+                        gameState.currentQuestion = data.currentQuestion;
+                        gameState.score = data.score;
+                        gameState.lastSavedQuestion = data.currentQuestion;
+
+                        // UI 업데이트
+                        elements.currentQuestion.textContent = gameState.currentQuestion;
+                        elements.currentScore.textContent = gameState.score;
+
+                        return true;
+                    }
+                }
+            } catch (error) {
+                console.error('진행 상황 복원 실패:', error);
+            }
+
+            return false;
+        }
+
         // --- API 호출 ---
         async function prepareGame() {
             try {
@@ -237,23 +299,23 @@
                         keyword: keyword
                     })
                 });
-                
+
                 if (!response.ok) {
                     const errorData = await response.json();
                     throw new Error(errorData.message || '게임 준비에 실패했습니다.');
                 }
-                
+
                 const data = await response.json();
                 gameState.quizSets = data.quizSets;
                 gameState.totalQuestions = data.totalQuestions;
                 gameState.isGameReady = true;
-                
+
                 toggleLoading(false); // 로딩 끝
-                
+
                 // 로딩 화면 숨기기 및 게임 화면 보이기
                 document.getElementById('loadingScreen').classList.add('hidden');
                 elements.imageGrid.classList.remove('hidden');
-                
+
                 return data;
             } catch (error) {
                 toggleLoading(false); // 로딩 끝
@@ -268,8 +330,6 @@
             }
             return gameState.quizSets[gameState.currentQuestion - 1];
         }
-
-
 
         async function fetchUserInfo() {
             try {
@@ -346,19 +406,26 @@
                 elements.resultContent.innerHTML = `<div class="text-red-600"><div class="text-3xl mb-3">❌ 틀렸습니다</div><div class="text-lg">AI가 생성한 이미지는 ${gameState.correctAnswer + 1}번이었습니다</div></div>`;
                 elements.resultMessage.className = 'bg-red-50 border-2 border-red-200 rounded-lg shadow-md p-6 text-center mb-8';
             }
+            gameState.currentQuestion++;
             updateScore();
+
+            // 진행 상황 자동 저장
+            saveGameProgress();
+
             elements.nextBtn.disabled = false;
             elements.nextBtn.classList.remove('opacity-50', 'cursor-not-allowed', 'hidden');
             elements.skipBtn.classList.add('hidden');
         }
 
         function nextQuestion() {
-            if (gameState.currentQuestion >= gameState.totalQuestions) {
+            if (gameState.currentQuestion > gameState.totalQuestions) {
+                // 최종 점수 저장
+                saveGameProgress(true);
+
                 const correct = gameState.score / 10;
                 window.location.href = `/result?score=${gameState.score}&correct=${correct}&total=${gameState.totalQuestions}&difficulty=${gameState.difficulty}&category=${encodeURIComponent(category)}`;
                 return;
             }
-            gameState.currentQuestion++;
             gameState.selectedAnswer = null;
             elements.currentQuestion.textContent = gameState.currentQuestion;
             elements.resultMessage.classList.add('hidden');
@@ -376,7 +443,6 @@
         // --- 초기화 및 이벤트 리스너 ---
         function setupEventListeners() {
             elements.skipBtn.addEventListener('click', () => {
-                // 사용자에게 confirm() 대신 커스텀 모달 UI를 사용해야 하지만, 여기서는 임시로 confirm()을 사용합니다.
                 if (confirm('이 문제를 건너뛰시겠습니까?')) nextQuestion();
             });
             elements.nextBtn.addEventListener('click', nextQuestion);
@@ -413,6 +479,35 @@
                     window.location.href = '/welcome';
                 }
             });
+
+            // 홈 버튼 클릭시 저장 후 이동
+            elements.homeBtn = document.getElementById('homeBtn');
+            elements.homeBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (gameState.score > 0) {
+                    saveGameProgress().then(() => {
+                        window.location.href = '/category';
+                    });
+                } else {
+                    window.location.href = '/category';
+                }
+            });
+
+            // 페이지 이탈 시 자동 저장
+            window.addEventListener('beforeunload', function(event) {
+                if (gameState.currentQuestion > gameState.lastSavedQuestion && gameState.score > 0) {
+                    // 일부 브라우저 호환성을 위해 Blob으로 감싸서 전송합니다.
+                    const data = JSON.stringify({
+                        currentQuestion: gameState.currentQuestion,
+                        score: gameState.score,
+                        difficulty: gameState.difficulty,
+                        category: category,
+                        keyword: keyword, // [수정] 여기에도 키워드를 포함합니다.
+                        isFinal: false
+                    });
+                    navigator.sendBeacon('/api/save-progress', new Blob([data], { type: 'application/json' }));
+                }
+            });
         }
 
         async function initGame() {
@@ -422,10 +517,18 @@
             await fetchUserInfo(); // 사용자 정보 로딩
             setupEventListeners();
 
+            // 게임 재개인지 확인하고 진행 상황 복원
+            const wasRestored = await restoreProgress();
+
+            if (wasRestored) {
+                // 복원된 경우 알림 표시
+                alert(`${gameState.currentQuestion}번째 문제부터 이어서 시작합니다. (현재 점수: ${gameState.score}점)`);
+            }
+
             // 게임 준비 (AI 이미지 생성 및 퀴즈 세트 준비)
             await prepareGame();
-            
-            // 첫 번째 문제 표시
+
+            // 첫 번째 문제 표시 (복원된 경우 해당 문제부터)
             if (gameState.isGameReady) {
                 createImageGrid();
             }
