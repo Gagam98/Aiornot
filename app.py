@@ -15,6 +15,9 @@ from crawling import generate_images_concurrent
 from dotenv import load_dotenv
 import os
 
+import logging
+logger = logging.getLogger(__name__)
+
 load_dotenv()
 PIXABAY_API_KEY = os.getenv("PIXABAY_API_KEY")
 
@@ -161,11 +164,34 @@ def create_app():
 
             # 생성된 AI 이미지 경로 수집
             ai_image_paths = []
+            failed_prompts = []
             for prompt, paths in ai_results.items():
-                ai_image_paths.extend([str(path) for path in paths])
+                if paths:
+                    ai_image_paths.extend([str(path) for path in paths])
+                else:
+                    failed_prompts.append(prompt)
 
-            if len(ai_image_paths) < 10:
-                return jsonify({'message': 'AI 이미지 생성에 실패했습니다.'}), 500
+                # 재시도 로직: 부족하면 실패한 프롬프트 재시도
+            if len(ai_image_paths) < 10 and failed_prompts:
+                logger.info(f"재시도: {len(failed_prompts)}개 프롬프트로 추가 생성")
+
+                retry_results = generate_images_concurrent(
+                    prompts=failed_prompts,
+                    out_dir=f"static/generated/{search_query}",
+                    repeat_per_prompt=1,
+                    max_workers=len(failed_prompts)
+                )
+
+                for prompt, paths in retry_results.items():
+                    ai_image_paths.extend([str(path) for path in paths])
+
+                # 유연한 기준: 6장 이상이면 진행 (최소 6문제 가능)
+            min_required = 6
+            if len(ai_image_paths) < min_required:
+                return jsonify({
+                    'message': f'AI 이미지 생성 부족 (생성: {len(ai_image_paths)}장, 최소: {min_required}장)',
+                    'generated_count': len(ai_image_paths)
+                }), 500
 
             # Pixabay에서 실제 사진 50장 가져오기
             api_url = f"https://pixabay.com/api/?key={PIXABAY_API_KEY}&q={requests.utils.quote(search_query)}&image_type=photo&per_page=50"
@@ -184,8 +210,9 @@ def create_app():
             # 퀴즈 세트 생성 (10문제)
             quiz_sets = []
             images_per_question = 6 if difficulty == 'hard' else 2
+            max_questions = min(10, len(ai_image_paths))  # 생성된 이미지 수에 따라 조정
 
-            for i in range(10):
+            for i in range(max_questions):
                 # AI 이미지 1장과 실제 이미지 (images_per_question-1)장 선택
                 ai_image = ai_image_paths[i] if i < len(ai_image_paths) else random.choice(ai_image_paths)
                 real_images = random.sample(real_image_urls, images_per_question - 1)
@@ -213,9 +240,11 @@ def create_app():
                 })
 
             return jsonify({
-                'message': '게임 준비가 완료되었습니다.',
+                'message': f'게임 준비가 완료되었습니다. (AI 이미지: {len(ai_image_paths)}장)',
                 'quizSets': quiz_sets,
-                'totalQuestions': 10
+                'totalQuestions': len(quiz_sets),
+                'aiImagesGenerated': len(ai_image_paths),
+                'isPartialGeneration': len(ai_image_paths) < 10
             })
 
         except requests.exceptions.RequestException as e:
@@ -277,17 +306,20 @@ def create_app():
         }
 
         custom_prompts = [
-            f"A {category} is sitting quietly in the park, trees swaying gently in the wind.",
-            f"A beautiful {category}, glowing softly under the warm sunlight.",
-            f"A cyber-style {category}, with mechanical parts and futuristic aesthetics.",
-            f"A vintage {category}, inspired by 19th-century design elements.",
-            f"A floating {category}, spinning silently in the sky.",
-            f"Generate a hyper-realistic photograph of a person in a setting related to '{category}'. The photo should be detailed and appear as if it was captured with a high-end camera",
-            f"Create a stylized, artistic shot of an object or landscape featuring '{category}'. Emphasize intricate patterns and surreal lighting to make it visually striking.",
-            f"Generate a detailed digital art illustration of a scene featuring '{category}'. The illustration should have vibrant colors, clean lines, and a dramatic, high-contrast style.",
-            f"Produce a stunning close-up shot of an object or concept related to '{category}'. The image should have a shallow depth of field, with a blurred background to emphasize intricate details and textures on the main subject.",
-            f"Create a breathtaking landscape image where '{category}' is the central element. The image should feature a dramatic sky, rich colors, and a sense of depth.",
-        ]
+            f"A lifelike {category} in a real park, trees swaying gently in the wind, candid composition",
+            f"A beautiful {category} under warm golden-hour sunlight, soft rim light, cinematic composition",
+            f"A realistic scene with a person naturally interacting with a {category}, captured in ultra-high-resolution with cinematic lighting and a professional lens.",
+            f"photographed in a workshop, believable wear and fingerprints" ,
+            f"A vintage {category} styled with authentic 19th-century props and wardrobe, film-like grain and slight halation" ,
+            f"A levitation shot of {category} captured with a clean background and believable physics (subtle motion blur)" ,
+            f"A hyper-realistic documentary photo featuring a person interacting with or representing '{category}', natural pose and expression" ,
+            f"A studio still-life of objects that embody '{category}', seamless backdrop, softbox lighting, crisp detail" ,
+            f"A detailed macro photo of textures linked to '{category}', shallow depth of field, tactile realism" ,
+            f"A sweeping landscape where '{category}' is the clear focal element, layered depth and atmospheric perspective" ,
+            f"A candid street-photography scene that naturally includes '{category}', off-guard moment, believable context" ,
+            f"A night scene centered on '{category}' with practical light sources (neon, streetlamps), controlled noise",
+            f"An editorial portrait that symbolizes '{category}', thoughtful styling and location, authentic skin texture"
+            ]
 
         if category in ["cat", "icecream", "rose", "fruit"]:
             return prompts_map.get(category, prompts_map["cat"])
