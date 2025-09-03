@@ -1,5 +1,4 @@
 # app.py
-
 import os
 import random
 import requests
@@ -15,13 +14,62 @@ from crawling import generate_images_concurrent
 
 # --- 설정 부분 ---
 PIXABAY_API_KEY = "52091010-849e60920cd3cadb857a7d1d3"
-CATEGORY_MAP = {
-    "고양이": "cat",
-    "아이스크림": "icecream",
-    "장미": "rose",
-    "과일": "fruit",
+# 개선된 카테고리 매핑 시스템
+CATEGORY_CONFIG = {
+    "cat": {
+        "ko": "고양이",
+        "en": "cat",
+        "search_query": "cat",
+        "image": "cat.jpg"
+    },
+    "icecream": {
+        "ko": "아이스크림", 
+        "en": "icecream",
+        "search_query": "icecream",
+        "image": "icecream.jpg"
+    },
+    "rose": {
+        "ko": "장미",
+        "en": "rose", 
+        "search_query": "rose",
+        "image": "rose.jpg"
+    },
+    "fruit": {
+        "ko": "과일",
+        "en": "fruit",
+        "search_query": "fruit", 
+        "image": "fruits.jpg"
+    },
+    "random": {
+        "ko": "랜덤",
+        "en": "random",
+        "search_query": "random",
+        "image": "random.jpg"
+    },
+    "custom": {
+        "ko": "나만퀴(나만의 퀴즈 만들기)",
+        "en": "custom",
+        "search_query": "custom",
+        "image": "question.png"
+    }
 }
 
+# 하위 호환성을 위한 기존 매핑 (한글 키 -> 영어 키)
+LEGACY_CATEGORY_MAP = {v["ko"]: k for k, v in CATEGORY_CONFIG.items()}
+
+# API에서 한글/영어 키를 모두 지원하는 헬퍼 함수
+def get_category_info(category_input):
+    """카테고리 입력(한글/영어)을 받아서 표준화된 정보를 반환"""
+    # 영어 키로 직접 조회 시도
+    if category_input in CATEGORY_CONFIG:
+        return category_input, CATEGORY_CONFIG[category_input]
+    
+    # 한글 키로 조회 (하위 호환성)
+    english_key = LEGACY_CATEGORY_MAP.get(category_input)
+    if english_key:
+        return english_key, CATEGORY_CONFIG[english_key]
+    
+    return None, None
 
 def create_app():
     app = Flask(__name__)
@@ -61,38 +109,40 @@ def create_app():
     def result():
         return render_template('result.html')
 
-    # --- API 엔드포인트 ---
-
+    # --- API 엔드포인트 --- 제거예정
     @app.route('/api/get-quiz-images', methods=['GET'])
     def get_quiz_images():
         """
         카테고리에 맞는 퀴즈 이미지를 Pixabay API를 통해 가져오는 API
-        '랜덤'과 '나만퀴' 카테고리를 처리하는 로직이 추가되었습니다.
+        영어/한글 키를 모두 지원합니다.
         """
-        category_ko = request.args.get('category')
+        category_input = request.args.get('category')
         count = request.args.get('count', default=2, type=int)
 
-        if not category_ko:
+        if not category_input:
             return jsonify({'message': '카테고리 정보가 없습니다.'}), 400
 
+        # 카테고리 정보 가져오기 (한글/영어 모두 지원)
+        category_key, category_info = get_category_info(category_input)
+        
+        if not category_key:
+            return jsonify({'message': f"'{category_input}'에 대한 카테고리를 찾을 수 없습니다."}), 404
+
         # '나만퀴' 특별 처리
-        if category_ko == '나만퀴(나만의 퀴즈 만들기)':
-            # TODO: 여기에 '나만퀴'를 위한 커스텀 로직을 구현해야 합니다.
-            # 예를 들어, 사용자가 만든 퀴즈 데이터를 DB에서 가져올 수 있습니다.
+        if category_key == 'custom':
+            # 나만퀴 기능은 준비 중입니다.
             # 현재는 빈 이미지 리스트와 함께 성공 응답을 보냅니다.
             return jsonify({'images': [], 'correctAnswer': 0, 'message': '나만퀴 기능은 준비 중입니다.'})
 
         # '랜덤' 카테고리 처리
-        if category_ko == '랜덤':
-            # CATEGORY_MAP의 키(한글 이름) 중 하나를 무작위로 선택
-            random_category_ko = random.choice(list(CATEGORY_MAP.keys()))
-            search_query = CATEGORY_MAP[random_category_ko]
+        if category_key == 'random':
+            # 랜덤 카테고리 제외하고 하나 선택
+            available_categories = [k for k in CATEGORY_CONFIG.keys() if k not in ['random', 'custom']]
+            selected_category_key = random.choice(available_categories)
+            search_query = CATEGORY_CONFIG[selected_category_key]['search_query']
         else:
             # 일반 카테고리 처리
-            search_query = CATEGORY_MAP.get(category_ko)
-
-        if not search_query:
-            return jsonify({'message': f"'{category_ko}'에 대한 검색어를 찾을 수 없습니다."}), 404
+            search_query = category_info['search_query']
 
         api_url = f"https://pixabay.com/api/?key={PIXABAY_API_KEY}&q={requests.utils.quote(search_query)}&image_type=photo&per_page=50"
 
@@ -102,7 +152,7 @@ def create_app():
             data = response.json()
 
             if not data.get("hits"):
-                return jsonify({'message': f"'{category_ko}'에 대한 이미지를 찾을 수 없습니다."}), 404
+                return jsonify({'message': f"'{category_info['ko']}'에 대한 이미지를 찾을 수 없습니다."}), 404
 
             all_image_urls = [hit['largeImageURL'] for hit in data['hits']]
 
@@ -124,32 +174,32 @@ def create_app():
         """게임 시작 전 AI 이미지를 미리 생성하고 퀴즈 세트를 준비"""
         try:
             data = request.get_json()
-            category_ko = data.get('category')
+            category_input = data.get('category')
             difficulty = data.get('difficulty', 'easy')
-
-            if not category_ko:
+            keyword = data.get('keyword', '')
+            
+            if not category_input:
                 return jsonify({'message': '카테고리 정보가 없습니다.'}), 400
 
-            # '나만퀴' 특별 처리
-            if category_ko == '나만퀴(나만의 퀴즈 만들기)':
-                # TODO: 여기에 '나만퀴'를 위한 커스텀 로직을 구현해야 합니다.
-                # 예를 들어, 사용자가 만든 퀴즈 데이터를 DB에서 가져올 수 있습니다.
-                # 현재는 빈 이미지 리스트와 함께 성공 응답을 보냅니다.
-                return jsonify({'images': [], 'correctAnswer': 0, 'message': '나만퀴 기능은 준비 중입니다.'})
+            # 카테고리 정보 가져오기 (한글/영어 모두 지원)
+            category_key, category_info = get_category_info(category_input)
+            
+            if not category_key:
+                return jsonify({'message': f"'{category_input}'에 대한 카테고리를 찾을 수 없습니다."}), 404
 
             # '랜덤' 카테고리 처리
-            if category_ko == '랜덤':
-                # CATEGORY_MAP의 키(한글 이름) 중 하나를 무작위로 선택
-                random_category_ko = random.choice(list(CATEGORY_MAP.keys()))
-                search_query = CATEGORY_MAP[random_category_ko]
+            if category_key == 'random':
+                # 랜덤 카테고리 제외하고 하나 선택
+                available_categories = [k for k in CATEGORY_CONFIG.keys() if k not in ['random', 'custom']]
+                selected_category_key = random.choice(available_categories)
+                search_query = CATEGORY_CONFIG[selected_category_key]['search_query']
+            elif category_key == 'custom':
+                search_query = keyword
             else:
                 # 일반 카테고리 처리
-                search_query = CATEGORY_MAP.get(category_ko)
+                search_query = category_info['search_query']
 
-            if not search_query:
-                return jsonify({'message': f"'{category_ko}'에 대한 검색어를 찾을 수 없습니다."}), 404
-
-            # AI 이미지 생성용 프롬프트 (crawling.py의 프롬프트 재사용)
+            # AI 이미지 생성용 프롬프트
             ai_prompts = get_ai_prompts_for_category(search_query)
 
             # AI 이미지 10장 생성
@@ -175,7 +225,7 @@ def create_app():
             pixabay_data = response.json()
 
             if not pixabay_data.get("hits"):
-                return jsonify({'message': f"'{category_ko}'에 대한 실제 이미지를 찾을 수 없습니다."}), 404
+                return jsonify({'message': f"'{category_info['ko']}'에 대한 실제 이미지를 찾을 수 없습니다."}), 404
 
             real_image_urls = [hit['largeImageURL'] for hit in pixabay_data['hits']]
 
@@ -274,9 +324,26 @@ def create_app():
                 "Photorealistic stainless bowl reflection with assorted fruits on a counter, 24mm, f/3.5, ISO 800, 1/60s, cool kitchen light, subtle reflections, center big gemini watermark.",
                 "Photorealistic farmers market display of colorful seasonal fruits, 35mm, f/4, ISO 200, 1/500s, natural outdoor lighting, vibrant colors, center big gemini watermark.",
                 "Photorealistic tropical fruit salad in coconut bowl on beach sand, 50mm, f/2.8, ISO 100, 1/1000s, bright beach lighting, shallow depth of field, center big gemini watermark."
-            ]
+            ],
         }
-        return prompts_map.get(category, prompts_map["cat"])  # 기본값으로 cat 사용
+
+        custom_prompts = [
+            f"A {category} is sitting quietly in the park, trees swaying gently in the wind.",
+            f"A beautiful {category}, glowing softly under the warm sunlight.",
+            f"A cyber-style {category}, with mechanical parts and futuristic aesthetics.",
+            f"A vintage {category}, inspired by 19th-century design elements.",
+            f"A floating {category}, spinning silently in the sky.",
+            f"Generate a hyper-realistic photograph of a person in a setting related to '{category}'. The photo should be detailed and appear as if it was captured with a high-end camera",
+            f"Create a stylized, artistic shot of an object or landscape featuring '{category}'. Emphasize intricate patterns and surreal lighting to make it visually striking.",
+            f"Generate a detailed digital art illustration of a scene featuring '{category}'. The illustration should have vibrant colors, clean lines, and a dramatic, high-contrast style.",
+            f"Produce a stunning close-up shot of an object or concept related to '{category}'. The image should have a shallow depth of field, with a blurred background to emphasize intricate details and textures on the main subject.",
+            f"Create a breathtaking landscape image where '{category}' is the central element. The image should feature a dramatic sky, rich colors, and a sense of depth.",
+        ]
+
+        if category in ["cat", "icecream", "rose", "fruit"]:
+            return prompts_map.get(category, prompts_map["cat"])
+        else:   
+            return custom_prompts 
 
     @app.route('/api/save-score', methods=['POST'])
     @jwt_required()
@@ -339,7 +406,6 @@ def create_app():
         return jsonify({'message': '페이지를 찾을 수 없습니다'}), 404
 
     return app
-
 
 # 앱 인스턴스 생성
 app = create_app()

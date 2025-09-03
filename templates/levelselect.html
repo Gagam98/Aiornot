@@ -184,7 +184,7 @@
 
             const logoutButton = document.getElementById('logoutButton');
             logoutButton.addEventListener('click', function(e) {
-                e.preventDefault();
+                e.eventDefault();
                 localStorage.removeItem('accessToken');
                 localStorage.removeItem('username');
                 window.location.href = '/welcome';
@@ -202,22 +202,23 @@
             const customQuizInputContainer = document.getElementById('customQuizInputContainer');
 
             const categoryData = {
-                '고양이': 'cat.jpg',
-                '아이스크림': 'icecream.jpg',
-                '장미': 'rose.jpg',
-                '과일': 'fruits.jpg',
-                '랜덤': 'random.jpg',
-                '나만퀴(나만의 퀴즈 만들기)': 'question.png'
+                'cat': { name: '고양이', image: 'cat.jpg' },
+                'icecream': { name: '아이스크림', image: 'icecream.jpg' },
+                'rose': { name: '장미', image: 'rose.jpg' },
+                'fruit': { name: '과일', image: 'fruits.jpg' },
+                'random': { name: '랜덤', image: 'random.jpg' },
+                'custom': { name: '나만퀴(나만의 퀴즈 만들기)', image: 'question.png' }
             };
 
             // 카테고리가 유효할 때만 아래 로직을 실행
             if (category && categoryData[category]) {
-                categoryTitle.textContent = `${category} 퀴즈`;
-                categoryImage.src = `/static/images/${categoryData[category]}`;
-                categoryImage.alt = `${category} 카테고리 이미지`;
+                const categoryInfo = categoryData[category];
+                categoryTitle.textContent = `${categoryInfo.name} 퀴즈`;
+                categoryImage.src = `/static/images/${categoryInfo.image}`;
+                categoryImage.alt = `${categoryInfo.name} 카테고리 이미지`;
 
                 // '나만퀴'일 경우 UI를 동적으로 변경
-                if (category === '나만퀴(나만의 퀴즈 만들기)') {
+                if (category === 'custom') {
                     categoryTitle.textContent = '나만의 퀴즈 만들기';
                     categoryDescription.textContent = '원하는 퀴즈의 주제를 직접 입력하고 생성해보세요!';
                     // HTML 요소가 확실히 존재할 때 클래스를 제거하므로 안전함
@@ -230,9 +231,9 @@
 
             // startGame 함수와 이벤트 리스너는 기존과 동일하게 잘 작성되어 있습니다.
             function startGame(difficulty) {
-                let gameUrl = `/game?difficulty=${difficulty}&category=${encodeURIComponent(category)}`;
+                let gameUrl = `/game?difficulty=${difficulty}&category=${category}`;
 
-                if (category === '나만퀴(나만의 퀴즈 만들기)') {
+                if (category === 'custom') {
                     const keywordInput = document.getElementById('customKeywordInput');
                     const keyword = keywordInput.value.trim();
 
