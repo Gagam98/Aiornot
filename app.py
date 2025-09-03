@@ -11,6 +11,9 @@ from extensions import mongo
 from datetime import datetime
 from ranking import get_ranking_data
 from crawling import generate_images_concurrent
+import logging
+
+logger = logging.getLogger(__name__)
 
 from dotenv import load_dotenv
 import os
@@ -197,6 +200,7 @@ def create_app():
                 available_categories = [k for k in CATEGORY_CONFIG.keys() if k not in ['random', 'custom']]
                 selected_category_key = random.choice(available_categories)
                 search_query = CATEGORY_CONFIG[selected_category_key]['search_query']
+            # 나만퀴 처리
             elif category_key == 'custom':
                 search_query = keyword
             else:
@@ -216,11 +220,35 @@ def create_app():
 
             # 생성된 AI 이미지 경로 수집
             ai_image_paths = []
+            failed_prompts = []
+            
             for prompt, paths in ai_results.items():
-                ai_image_paths.extend([str(path) for path in paths])
+                if paths:
+                    ai_image_paths.extend([str(path) for path in paths])
+                else:
+                    failed_prompts.append(prompt)
 
-            if len(ai_image_paths) < 10:
-                return jsonify({'message': 'AI 이미지 생성에 실패했습니다.'}), 500
+            # 재시도 로직: 부족하면 실패한 프롬프트 재시도
+            if len(ai_image_paths) < 10 and failed_prompts:
+                logger.info(f"재시도: {len(failed_prompts)}개 프롬프트로 추가 생성")
+                
+                retry_results = generate_images_concurrent(
+                    prompts=failed_prompts,
+                    out_dir=f"static/generated/{search_query}",
+                    repeat_per_prompt=1,
+                    max_workers=len(failed_prompts)
+                )
+                
+                for prompt, paths in retry_results.items():
+                    ai_image_paths.extend([str(path) for path in paths])
+
+            # 유연한 기준: 6장 이상이면 진행 (최소 6문제 가능)
+            min_required = 6
+            if len(ai_image_paths) < min_required:
+                return jsonify({
+                    'message': f'AI 이미지 생성 부족 (생성: {len(ai_image_paths)}장, 최소: {min_required}장)',
+                    'generated_count': len(ai_image_paths)
+                }), 500
 
             # Pixabay에서 실제 사진 50장 가져오기
             api_url = f"https://pixabay.com/api/?key={PIXABAY_API_KEY}&q={requests.utils.quote(search_query)}&image_type=photo&per_page=50"
@@ -236,16 +264,17 @@ def create_app():
             if len(real_image_urls) < 10:
                 return jsonify({'message': '실제 이미지가 부족합니다.'}), 409
 
-            # 퀴즈 세트 생성 (10문제)
+            # 퀴즈 세트 생성 (생성된 AI 이미지 수에 따라 조정)
             quiz_sets = []
             images_per_question = 6 if difficulty == 'hard' else 2
+            max_questions = min(10, len(ai_image_paths))  # 생성된 이미지 수에 따라 조정
 
-            for i in range(10):
+            for i in range(max_questions):
                 # AI 이미지 1장과 실제 이미지 (images_per_question-1)장 선택
                 ai_image = ai_image_paths[i] if i < len(ai_image_paths) else random.choice(ai_image_paths)
                 real_images = random.sample(real_image_urls, images_per_question - 1)
 
-                # 이미지 목록 생성 및 셞기
+                # 이미지 목록 생성 및 섞기
                 question_images = [ai_image] + real_images
                 random.shuffle(question_images)
 
@@ -268,9 +297,11 @@ def create_app():
                 })
 
             return jsonify({
-                'message': '게임 준비가 완료되었습니다.',
+                'message': f'게임 준비가 완료되었습니다. (AI 이미지: {len(ai_image_paths)}장)',
                 'quizSets': quiz_sets,
-                'totalQuestions': 10
+                'totalQuestions': len(quiz_sets),
+                'aiImagesGenerated': len(ai_image_paths),
+                'isPartialGeneration': len(ai_image_paths) < 10
             })
 
         except requests.exceptions.RequestException as e:
@@ -282,52 +313,52 @@ def create_app():
         """카테고리별 AI 이미지 생성 프롬프트 반환"""
         prompts_map = {
             "cat": [
-                "Photorealistic sunrise rooftop shot of a tabby cat sitting on a warm metal railing, 35mm, f/2.0, ISO 200, 1/800s, golden rim light, gentle haze, center big gemini watermark.",
-                "Photorealistic cat peeking out of a cardboard box on a living room floor, 50mm, f/1.8, ISO 400, 1/250s, side window light, soft bokeh, center big gemini watermark.",
-                "Photorealistic reflection of a black cat in a wall mirror, 35mm, f/2.2, ISO 800, 1/125s, tungsten lamp mixed with daylight, handheld, center big gemini watermark.",
-                "Photorealistic alley scene with a ginger cat near a puddle after rain, 28mm, f/2.8, ISO 320, 1/500s, overcast sky, subtle reflections, center big gemini watermark.",
-                "Photorealistic close-up of a cat's collar tag and fur texture, 85mm, f/2.8, ISO 200, 1/400s, diffused daylight, high micro-contrast, center big gemini watermark.",
-                "Photorealistic candid through houseplants showing a cat on a windowsill, 50mm, f/2.0, ISO 320, 1/250s, backlit greenery bokeh, center big gemini watermark.",
-                "Photorealistic top-down shot of a white cat lounging on tatami mat, 35mm, f/2.8, ISO 200, 1/160s, soft ambient light, natural colors, center big gemini watermark.",
-                "Photorealistic cat curled beside a space heater glow, 35mm, f/1.8, ISO 1600, 1/100s, warm white balance, slight grain, center big gemini watermark.",
-                "Photorealistic maine coon cat stretching on wooden deck at sunset, 85mm, f/2.0, ISO 100, 1/1000s, warm golden hour lighting, center big gemini watermark.",
-                "Photorealistic persian cat sleeping in a sunbeam through lace curtains, 50mm, f/1.4, ISO 200, 1/500s, soft diffused light, dreamy bokeh, center big gemini watermark."
+                "Photorealistic sunrise rooftop shot of a tabby cat sitting on a warm metal railing, gentle haze, center big gemini watermark.",
+                "Photorealistic cat peeking out of a cardboard box on a living room floor, side window light, soft bokeh, center big gemini watermark.",
+                "Photorealistic reflection of a black cat in a wall mirror, tungsten lamp mixed with daylight, handheld, center big gemini watermark.",
+                "Photorealistic alley scene with a ginger cat near a puddle after rain, overcast sky, subtle reflections, center big gemini watermark.",
+                "Photorealistic close-up of a cat's collar tag and fur texture, diffused daylight, high micro-contrast, center big gemini watermark.",
+                "Photorealistic candid through houseplants showing a cat on a windowsill, backlit greenery bokeh, center big gemini watermark.",
+                "Photorealistic top-down shot of a white cat lounging on tatami mat, soft ambient light, natural colors, center big gemini watermark.",
+                "Photorealistic cat curled beside a space heater glow, warm white balance, slight grain, center big gemini watermark.",
+                "Photorealistic maine coon cat stretching on wooden deck at sunset, warm golden hour lighting, center big gemini watermark.",
+                "Photorealistic persian cat sleeping in a sunbeam through lace curtains, soft diffused light, dreamy bokeh, center big gemini watermark."
             ],
             "icecream": [
-                "Photorealistic cafe window seat shot of a strawberry sundae with condensation on the glass, 50mm, f/2.2, ISO 200, 1/250s, side window light, center big gemini watermark.",
-                "Photorealistic close-up of soft-serve swirling out of a machine into a cone, 70mm, f/4, ISO 400, 1/500s, clean stainless backdrop, motion freeze, center big gemini watermark.",
-                "Photorealistic child's hands holding a chocolate-dipped cone at a park, 35mm, f/2.0, ISO 100, 1/1000s, bright daylight, gentle background blur, center big gemini watermark.",
-                "Photorealistic macro detail of waffle cone texture with tiny sugar crystals, 100mm macro, f/5.6, ISO 200, 1/200s, softbox bounce, center big gemini watermark.",
-                "Photorealistic two friends clinking ice cream cones on a city street, 28mm, f/2.8, ISO 400, 1/800s, late afternoon sun, lively bokeh, center big gemini watermark.",
-                "Photorealistic car interior shot of a vanilla cone near the dashboard, 35mm, f/2.2, ISO 800, 1/160s, mixed lighting, natural reflections, center big gemini watermark.",
-                "Photorealistic evening street festival with a mango sorbet cup under string lights, 50mm, f/1.8, ISO 2000, 1/200s, warm bokeh, handheld, center big gemini watermark.",
-                "Photorealistic freezer door opening with frost swirl and a pistachio pint visible, 24mm, f/3.5, ISO 1600, 1/60s, cool white balance, center big gemini watermark.",
-                "Photorealistic gelato display case with colorful scoops under warm display lights, 35mm, f/2.8, ISO 800, 1/125s, commercial lighting, center big gemini watermark.",
-                "Photorealistic melting ice cream on hot pavement creating a colorful puddle, 50mm, f/4, ISO 100, 1/2000s, harsh midday sun, high contrast, center big gemini watermark."
+                "Photorealistic cafe window seat shot of a strawberry sundae with condensation on the glass, side window light",
+                "Photorealistic close-up of soft-serve swirling out of a machine into a cone, clean stainless backdrop, motion freeze",
+                "Photorealistic child's hands holding a chocolate-dipped cone at a park, bright daylight, gentle background blur",
+                "Photorealistic macro detail of waffle cone texture with tiny sugar crystals, softbox bounce.",
+                "Photorealistic two friends clinking ice cream cones on a city street, late afternoon sun, lively bokeh",
+                "Photorealistic car interior shot of a vanilla cone near the dashboard, mixed lighting, natural reflections",
+                "Photorealistic evening street festival with a mango sorbet cup under string lights, warm bokeh, handheld",
+                "Photorealistic freezer door opening with frost swirl and a pistachio pint visible, cool white balance",
+                "Photorealistic gelato display case with colorful scoops under warm display lights, commercial lighting",
+                "Photorealistic melting ice cream on hot pavement creating a colorful puddle, harsh midday sun, high contrast"
             ],
             "rose": [
-                "Photorealistic florist's cooler seen through fogged glass with red and white roses, 35mm, f/2.8, ISO 800, 1/125s, cool lighting, condensation detail, center big gemini watermark.",
-                "Photorealistic dried rose on linen fabric beside a window, 50mm, f/2.0, ISO 200, 1/200s, soft morning light, gentle shadows, center big gemini watermark.",
-                "Photorealistic rose silhouette projected on a wall by direct sunlight, 35mm, f/4, ISO 100, 1/2000s, strong contrast, crisp edges, center big gemini watermark.",
-                "Photorealistic candlelit macro of rose stamens and inner petals, 105mm macro, f/3.5, ISO 1600, 1/60s, warm flicker, handheld, center big gemini watermark.",
-                "Photorealistic rose crown woven into hair at an outdoor garden, 85mm, f/2.0, ISO 200, 1/640s, backlit strands, natural color, center big gemini watermark.",
-                "Photorealistic scattered rose petals on a marble staircase, 28mm, f/2.8, ISO 400, 1/250s, side light, subtle specular highlights, center big gemini watermark.",
-                "Photorealistic single yellow rose under a glass cloche on a wooden desk, 50mm, f/2.5, ISO 320, 1/160s, soft desk lamp, reflections controlled, center big gemini watermark.",
-                "Photorealistic raindrops sliding on a rose leaf with sharp vein detail, 100mm macro, f/5.6, ISO 400, 1/200s, overcast daylight, center big gemini watermark.",
-                "Photorealistic vintage rose bouquet in antique crystal vase, 85mm, f/2.8, ISO 200, 1/320s, window light with lace shadows, center big gemini watermark.",
-                "Photorealistic wild rose bush growing against old brick wall, 35mm, f/4, ISO 100, 1/1000s, natural outdoor lighting, textural detail, center big gemini watermark."
+                "Photorealistic florist's cooler seen through fogged glass with red and white roses, cool lighting, condensation detail",
+                "Photorealistic dried rose on linen fabric beside a window, soft morning light, gentle shadows",
+                "Photorealistic rose silhouette projected on a wall by direct sunlight, strong contrast, crisp edges",
+                "Photorealistic candlelit macro of rose stamens and inner petals, warm flicker, handheld",
+                "Photorealistic rose crown woven into hair at an outdoor garden, backlit strands, natural color",
+                "Photorealistic scattered rose petals on a marble staircase, side light, subtle specular highlights",
+                "Photorealistic single yellow rose under a glass cloche on a wooden desk, soft desk lamp, reflections controlled",
+                "Photorealistic raindrops sliding on a rose leaf with sharp vein detail, overcast daylight",
+                "Photorealistic vintage rose bouquet in antique crystal vase, window light with lace shadows",
+                "Photorealistic wild rose bush growing against old brick wall, natural outdoor lighting, textural detail"
             ],
             "fruit": [
-                "Photorealistic breakfast counter with a bowl of berries and yogurt, 35mm, f/2.8, ISO 200, 1/200s, side window light, natural tones, center big gemini watermark.",
-                "Photorealistic pouring smoothie into a glass with banana and spinach beside, 50mm, f/3.2, ISO 400, 1/500s, motion freeze, kitchen light, center big gemini watermark.",
-                "Photorealistic apple picking in an orchard with sunlit leaves, 35mm, f/2.0, ISO 200, 1/1000s, backlit flare, candid hands, center big gemini watermark.",
-                "Photorealistic analog scale with a crate of oranges on a market counter, 28mm, f/4, ISO 400, 1/160s, ambient indoor light, center big gemini watermark.",
-                "Photorealistic picnic bench with a freshly cut watermelon wedge, 35mm, f/2.8, ISO 100, 1/640s, bright midday sun, crisp texture, center big gemini watermark.",
-                "Photorealistic fig cross-section on a ceramic plate, 85mm, f/4, ISO 200, 1/200s, window side-light, rich seeds detail, center big gemini watermark.",
-                "Photorealistic grapes on the vine with translucent backlight, 70mm, f/2.8, ISO 100, 1/1000s, vineyard ambience, center big gemini watermark.",
-                "Photorealistic stainless bowl reflection with assorted fruits on a counter, 24mm, f/3.5, ISO 800, 1/60s, cool kitchen light, subtle reflections, center big gemini watermark.",
-                "Photorealistic farmers market display of colorful seasonal fruits, 35mm, f/4, ISO 200, 1/500s, natural outdoor lighting, vibrant colors, center big gemini watermark.",
-                "Photorealistic tropical fruit salad in coconut bowl on beach sand, 50mm, f/2.8, ISO 100, 1/1000s, bright beach lighting, shallow depth of field, center big gemini watermark."
+                "Photorealistic breakfast counter with a bowl of berries and yogurt, side window light, natural tones",
+                "Photorealistic pouring smoothie into a glass with banana and spinach beside, motion freeze, kitchen light",
+                "Photorealistic apple picking in an orchard with sunlit leaves, backlit flare, candid hands",
+                "Photorealistic analog scale with a crate of oranges on a market counter, ambient indoor light",
+                "Photorealistic picnic bench with a freshly cut watermelon wedge, bright midday sun, crisp texture",
+                "Photorealistic fig cross-section on a ceramic plate, window side-light, rich seeds detail",
+                "Photorealistic grapes on the vine with translucent backlight, vineyard ambience",
+                "Photorealistic stainless bowl reflection with assorted fruits on a counter, cool kitchen light, subtle reflections",
+                "Photorealistic farmers market display of colorful seasonal fruits, natural outdoor lighting, vibrant colors",
+                "Photorealistic tropical fruit salad in coconut bowl on beach sand, bright beach lighting, shallow depth of field"
             ],
         }
 
@@ -337,11 +368,11 @@ def create_app():
             f"A cyber-style {category}, with mechanical parts and futuristic aesthetics.",
             f"A vintage {category}, inspired by 19th-century design elements.",
             f"A floating {category}, spinning silently in the sky.",
-            f"Generate a hyper-realistic photograph of a person in a setting related to '{category}'. The photo should be detailed and appear as if it was captured with a high-end camera",
-            f"Create a stylized, artistic shot of an object or landscape featuring '{category}'. Emphasize intricate patterns and surreal lighting to make it visually striking.",
-            f"Generate a detailed digital art illustration of a scene featuring '{category}'. The illustration should have vibrant colors, clean lines, and a dramatic, high-contrast style.",
-            f"Produce a stunning close-up shot of an object or concept related to '{category}'. The image should have a shallow depth of field, with a blurred background to emphasize intricate details and textures on the main subject.",
-            f"Create a breathtaking landscape image where '{category}' is the central element. The image should feature a dramatic sky, rich colors, and a sense of depth.",
+            f"Generate a hyper-realistic photograph of a person in a setting related to {category}.",
+            f"Create a stylized, artistic shot of an object or landscape featuring {category}.",
+            f"Generate a detailed digital art illustration of a scene featuring {category}.",
+            f"Produce a stunning close-up shot of an object or concept related to {category}.",
+            f"Create a breathtaking landscape image where {category} is the central element. ",
         ]
 
         if category in ["cat", "icecream", "rose", "fruit"]:

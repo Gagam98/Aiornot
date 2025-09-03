@@ -213,8 +213,8 @@ if __name__ == "__main__":
         results = generate_images_concurrent(
             prompts=prompts,
             out_dir=out_dir,
-            repeat_per_prompt=2,
-            max_workers=20,
+            repeat_per_prompt=1,
+            max_workers=10,
             model=DEFAULT_MODEL,
             filename_prefix=None,
         )
